@@ -1,0 +1,132 @@
+import re
+import json
+
+from obradi_dokumente import PROCESSED_DIR
+
+MAX_CHUNK_KARAKTERA = 1200
+PREKLAPANJE_KARAKTERA = 250  # susjedni chunkovi dijele kraj prethodnog, da nabrajanje
+                              # presjeceno na granici ne ostane "polovicno" (npr. lista
+                              # modula koja stane poslije prve stavke - LLM tada dopuni
+                              # ostatak iz svog znanja umjesto iz dokumenta)
+
+NASLOV_H1_REGEX = re.compile(r'(?m)^# .+\n+')
+NASLOV_SEKCIJE_REGEX = re.compile(r'(?m)^## (.+)$')
+
+
+def podijeli_na_sekcije(tekst):
+    delovi = NASLOV_SEKCIJE_REGEX.split(tekst)
+
+    sekcije = []
+    uvod = delovi[0].strip()
+    if uvod:
+        sekcije.append((None, uvod))
+
+    for i in range(1, len(delovi), 2):
+        naslov = delovi[i].strip()
+        sadrzaj = delovi[i + 1].strip() if i + 1 < len(delovi) else ""
+        if sadrzaj:
+            sekcije.append((naslov, sadrzaj))
+
+    return sekcije
+
+
+def podijeli_tekst_do_granice(sadrzaj, max_karaktera, razdvajac='\n\n'):
+    dijelovi = [d.strip() for d in sadrzaj.split(razdvajac) if d.strip()]
+    grupe = []
+    trenutna = []
+    trenutna_duzina = 0
+
+    for dio in dijelovi:
+        if len(dio) > max_karaktera:
+            if trenutna:
+                grupe.append(razdvajac.join(trenutna))
+                trenutna = []
+                trenutna_duzina = 0
+            if razdvajac == '\n\n':
+                # ovaj "pasus" nema praznih redova unutar sebe, probaj po pojedinacnim redovima
+                grupe.extend(podijeli_tekst_do_granice(dio, max_karaktera, razdvajac='\n'))
+            else:
+                # ni pojedinacan red se ne moze dalje bezbjedno usitniti, ostavi ga kako jeste
+                grupe.append(dio)
+            continue
+
+        if trenutna and trenutna_duzina + len(dio) + len(razdvajac) > max_karaktera:
+            grupe.append(razdvajac.join(trenutna))
+            trenutna = []
+            trenutna_duzina = 0
+
+        trenutna.append(dio)
+        trenutna_duzina += len(dio) + len(razdvajac)
+
+    if trenutna:
+        grupe.append(razdvajac.join(trenutna))
+
+    return grupe
+
+
+def dodaj_preklapanje(grupe, preklapanje=PREKLAPANJE_KARAKTERA):
+    if len(grupe) < 2:
+        return grupe
+
+    sa_preklapanjem = [grupe[0]]
+    for i in range(1, len(grupe)):
+        rep = grupe[i - 1][-preklapanje:]
+        # ne sijeci rijec na pola - kreni od prvog prelomna reda u repu
+        prelom = rep.find('\n')
+        if prelom != -1:
+            rep = rep[prelom + 1:]
+        sa_preklapanjem.append(f"{rep.strip()}\n{grupe[i]}" if rep.strip() else grupe[i])
+
+    return sa_preklapanjem
+
+
+def napravi_chunkove_za_dokument(folder):
+    tekst = (folder / "document.md").read_text(encoding="utf-8")
+    metadata = json.loads((folder / "metadata.json").read_text(encoding="utf-8"))
+
+    tekst = NASLOV_H1_REGEX.sub('', tekst, count=1)
+    sekcije = podijeli_na_sekcije(tekst)
+
+    chunkovi = []
+    redni_broj = 0
+
+    for naslov_sekcije, sadrzaj in sekcije:
+        if len(sadrzaj) <= MAX_CHUNK_KARAKTERA:
+            grupe = [sadrzaj]
+        else:
+            grupe = dodaj_preklapanje(podijeli_tekst_do_granice(sadrzaj, MAX_CHUNK_KARAKTERA))
+
+        for grupa in grupe:
+            redni_broj += 1
+            chunkovi.append({
+                "id": f"{folder.name}__{redni_broj}",
+                "tekst": grupa,
+                "naslov_dokumenta": metadata["title"],
+                "kategorija": metadata["category"],
+                "sekcija": naslov_sekcije or "",
+                "original_file": metadata["original_file"],
+                "ocr": metadata.get("ocr", False),
+            })
+
+    return chunkovi
+
+
+def main():
+    svi_chunkovi = []
+    broj_dokumenata = 0
+
+    for meta_putanja in sorted(PROCESSED_DIR.rglob("metadata.json")):
+        folder = meta_putanja.parent
+        svi_chunkovi.extend(napravi_chunkove_za_dokument(folder))
+        broj_dokumenata += 1
+
+    izlazna_putanja = PROCESSED_DIR / "chunks.jsonl"
+    with open(izlazna_putanja, "w", encoding="utf-8") as f:
+        for chunk in svi_chunkovi:
+            f.write(json.dumps(chunk, ensure_ascii=False) + "\n")
+
+    print(f"Napravljeno {len(svi_chunkovi)} chunkova iz {broj_dokumenata} dokumenata -> {izlazna_putanja}")
+
+
+if __name__ == "__main__":
+    main()

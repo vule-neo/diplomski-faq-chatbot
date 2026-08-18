@@ -1,2 +1,10 @@
 groq
 python-dotenv
+sentence-transformers
+chromadb
+pymupdf
+pdfplumber
+pytesseract
+rank_bm25
+fastapi
+uvicorn

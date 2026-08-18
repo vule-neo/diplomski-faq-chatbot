@@ -4,4 +4,15 @@ __pycache__/
 *.pyc
 node_modules/
 .angular/
+
+# izvedeni podaci - prave se ponovnim pokretanjem skripti iz src/ingest
 data/processed/
+data/chroma_db/
+
+# logovi i lokalni izlazi
+*.log
+data/feedback.jsonl
+data/upiti.jsonl
+
+# build izlaz frontenda
+frontend/dist/

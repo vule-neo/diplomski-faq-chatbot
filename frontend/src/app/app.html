@@ -1,0 +1,68 @@
+<div class="app-shell">
+  <header class="header">
+    <div class="header-content">
+      <div class="header-znak">ETF</div>
+      <div class="header-tekst">
+        <h1>Studentska služba — Asistent</h1>
+        <p>Pitaj o upisu, ispitima, školarini i pravilnicima</p>
+      </div>
+    </div>
+  </header>
+
+  <main class="chat-area">
+    @if (poruke().length === 0) {
+      <div class="prazno-stanje">
+        <p>👋 Postavi pitanje, npr. <em>„Koji su rokovi za prijavu ispita?"</em></p>
+      </div>
+    }
+
+    @for (poruka of poruke(); track $index) {
+      <div class="poruka" [class.poruka-korisnik]="poruka.tip === 'korisnik'" [class.poruka-bot]="poruka.tip === 'bot'">
+        <div class="mehur">
+          <p class="mehur-tekst">{{ poruka.tekst }}</p>
+          @if (poruka.izvori && poruka.izvori.length > 0) {
+            <div class="izvori">
+              @for (izvor of poruka.izvori; track $index) {
+                <span class="izvor-oznaka">
+                  {{ izvor.naslov_dokumenta }}{{ izvor.sekcija ? ', ' + izvor.sekcija : '' }}
+                </span>
+              }
+            </div>
+          }
+        </div>
+      </div>
+    }
+
+    @if (ucitavanje()) {
+      <div class="poruka poruka-bot">
+        <div class="mehur mehur-ucitavanje">
+          <span class="tacka"></span><span class="tacka"></span><span class="tacka"></span>
+        </div>
+      </div>
+    }
+
+    @if (greska()) {
+      <div class="greska-traka">⚠ {{ greska() }}</div>
+    }
+  </main>
+
+  <footer class="unos-traka">
+    <textarea
+      class="unos-polje"
+      placeholder="Postavi pitanje..."
+      rows="2"
+      [ngModel]="pitanje()"
+      (ngModelChange)="pitanje.set($event)"
+      (keydown)="naTipku($event)"
+      (input)="prilagodiVisinu($event)"
+      [disabled]="ucitavanje()"
+    ></textarea>
+    <button
+      class="dugme-posalji"
+      (click)="posaljiPitanje()"
+      [disabled]="ucitavanje() || !pitanje().trim()"
+    >
+      Pošalji
+    </button>
+  </footer>
+</div>

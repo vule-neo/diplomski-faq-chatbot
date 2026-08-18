@@ -26,8 +26,9 @@ odgovor — umjesto da izmišlja (halucinira).
 - **Backend:** Python 3.11+, FastAPI
 - **Vektorska baza:** ChromaDB (lokalna, fajl-based — nema potrebe za serverom/Dockerom)
 - **Embeddings:** sentence-transformers (lokalni model, besplatan)
-- **LLM:** Groq API, model Llama 3.3 70B — biran zbog brzine inferencije (LPU čipovi) i
-  besplatnog tier-a za razvoj
+- **LLM:** Groq API, model `openai/gpt-oss-120b` (originalno Llama 3.3 70B, ali je Groq taj
+  model u međuvremenu ugasio pa je zamijenjen — vidi `NAPOMENE.md`) — Groq biran zbog brzine
+  inferencije (LPU čipovi) i besplatnog tier-a za razvoj
 - **Frontend:** Angular (student već poznaje TypeScript/Angular sa fakulteta — svjestan izbor
   da se ne uči novi framework, fokus ide na RAG/backend dio koji je suština rada)
 - **Parsing dokumenata:** pypdf / pdfplumber za PDF, python-docx za Word
@@ -59,18 +60,18 @@ faq-chatbot/
 
 ## Plan rada po fazama (redoslijed, ne preskakati)
 
-- [ ] **Faza 0 — Priprema:** Python env, Groq API key, osnovni setup
-- [ ] **Faza 1 — LLM osnove:** skript koji poziva Groq API iz terminala, osnovni prompt engineering
-- [ ] **Faza 2 — Embeddings + ChromaDB:** mini test sa par rečenica, provjera da semantička pretraga radi
-- [ ] **Faza 3 — Ingestija dokumenata:** parsing PDF/DOCX iz `data/raw/`, chunking, upis u ChromaDB
-- [ ] **Faza 4 — RAG pipeline:** spajanje retrieval + generisanje, prompt "odgovori samo iz konteksta,
+- [x] **Faza 0 — Priprema:** Python env, Groq API key, osnovni setup
+- [x] **Faza 1 — LLM osnove:** skript koji poziva Groq API iz terminala, osnovni prompt engineering
+- [x] **Faza 2 — Embeddings + ChromaDB:** mini test sa par rečenica, provjera da semantička pretraga radi
+- [x] **Faza 3 — Ingestija dokumenata:** PDF/DOCX → detekcija tipa → OCR za skenove → ekstrakcija tabela/strukture → normalizacija → chunking → metadata → ChromaDB
+- [x] **Faza 4 — RAG pipeline:** spajanje retrieval + generisanje, prompt "odgovori samo iz konteksta,
       ako ne znaš — reci da ne znaš"
-- [ ] **Faza 5 — FastAPI backend:** endpoint `/ask`, testiranje kroz `/docs`
+- [x] **Faza 5 — FastAPI backend:** endpoint `/ask`, testiranje kroz `/docs`
 - [ ] **Faza 6 — Angular frontend:** chat komponenta, HTTP poziv ka backendu
 - [ ] **Faza 7 — Evaluacija:** 20-30 test pitanja (uključujući "trik" pitanja van FAQ-a), mjerenje
       tačnosti, dugme feedback (koristan/nekoristan odgovor) + logovanje nepoznatih pitanja
 
-**Trenutna faza: [ažurirati kako se napreduje]**
+**Trenutna faza: Faza 6 — Angular frontend**
 
 ## Kako Claude treba da radi na ovom projektu
 
@@ -105,6 +106,12 @@ faq-chatbot/
   formuliše na način koji zvuči kao studentov rad i razumijevanje, ne generički AI tekst.
 - Komunikacija sa studentom ide na bosanski/srpski (latinica), tehnički termini mogu ostati na
   engleskom gdje je prirodnije (embedding, chunking, retrieval, itd.).
+- **Nakon svake završene cjeline (bilo koji napisan/izmijenjen kod, bilo koja faza ili njen dio),
+  dopuni `NAPOMENE.md`** — radni dnevnik u korijenu projekta. Upisati: šta je cilj bio, šta je
+  urađeno, koje odluke su donesene i zašto, šta je probano pa nije uspjelo (i zašto), na kakve
+  prepreke se naišlo i kako su riješene, i konkretni rezultati/brojevi gdje ih ima. Ovo nije dio
+  predaje (isto kao CLAUDE.md, student ga uklanja prije predaje), ali je osnovni izvor za pisanje
+  poglavlja implementacije i evaluacije kasnije — ne preskakati ga ni kad se žuri.
 
 ## Dokumenti / izvori baze znanja
 
@@ -116,5 +123,5 @@ faq-chatbot/
 
 ## Napomene / odluke tokom rada
 
-*(Ovdje dodavati bitne odluke — npr. "odlučeno da se koristi ChromaDB umjesto Qdrant jer..." —
-korisno za pisanje rada kasnije)*
+Vidi `NAPOMENE.md` u korijenu projekta — tamo se vodi detaljan radni dnevnik (odluke, problemi,
+rezultati po fazama), dopunjuje se nakon svake završene cjeline.
