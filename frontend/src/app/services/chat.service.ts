@@ -2,7 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 
-import { FeedbackZahtev, OdgovorOdgovor, PitanjeZahtev } from '../models/chat.model';
+import { FeedbackZahtev, OdgovorOdgovor, PitanjeZahtev, RanijaPoruka } from '../models/chat.model';
 
 const API_URL = 'http://localhost:8000';
 
@@ -12,8 +12,8 @@ const API_URL = 'http://localhost:8000';
 export class ChatService {
   constructor(private http: HttpClient) {}
 
-  postaviPitanje(pitanje: string): Observable<OdgovorOdgovor> {
-    const zahtev: PitanjeZahtev = { pitanje };
+  postaviPitanje(pitanje: string, istorija: RanijaPoruka[] = []): Observable<OdgovorOdgovor> {
+    const zahtev: PitanjeZahtev = { pitanje, istorija };
     return this.http.post<OdgovorOdgovor>(`${API_URL}/ask`, zahtev);
   }
 

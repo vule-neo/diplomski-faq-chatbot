@@ -29,8 +29,16 @@ app.add_middleware(
 )
 
 
+class RanijaPoruka(BaseModel):
+    uloga: str = Field(..., pattern="^(korisnik|bot)$")
+    tekst: str
+
+
 class PitanjeZahtev(BaseModel):
     pitanje: str = Field(..., min_length=3, description="Pitanje studenta")
+    istorija: list[RanijaPoruka] = Field(
+        default_factory=list, description="Prethodne poruke u razgovoru"
+    )
 
 
 class IzvorInfo(BaseModel):
@@ -57,7 +65,10 @@ def health():
 @app.post("/ask", response_model=OdgovorOdgovor)
 def ask(zahtev: PitanjeZahtev):
     try:
-        odgovor, chunkovi = odgovori(zahtev.pitanje)
+        odgovor, chunkovi = odgovori(
+            zahtev.pitanje,
+            istorija=[p.model_dump() for p in zahtev.istorija],
+        )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Greška pri generisanju odgovora: {e}")
 

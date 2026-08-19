@@ -212,6 +212,83 @@
   white-space: pre-wrap;
 }
 
+/* --- markdown u odgovorima --- */
+
+.mehur-markdown {
+  white-space: normal;
+}
+
+.mehur-markdown > *:first-child {
+  margin-top: 0;
+}
+
+.mehur-markdown > *:last-child {
+  margin-bottom: 0;
+}
+
+.mehur-markdown p {
+  margin: 0 0 9px;
+}
+
+.mehur-markdown ul,
+.mehur-markdown ol {
+  margin: 0 0 9px;
+  padding-left: 21px;
+}
+
+.mehur-markdown li {
+  margin-bottom: 4px;
+}
+
+.mehur-markdown li::marker {
+  color: var(--neon);
+}
+
+.mehur-markdown strong {
+  color: var(--neon);
+  font-weight: 600;
+}
+
+.mehur-markdown h1,
+.mehur-markdown h2,
+.mehur-markdown h3 {
+  font-size: 14.5px;
+  font-weight: 650;
+  margin: 13px 0 7px;
+  color: var(--tekst);
+}
+
+.mehur-markdown code {
+  background: rgba(34, 211, 238, 0.1);
+  padding: 1px 5px;
+  border-radius: 5px;
+  font-size: 13px;
+}
+
+.mehur-markdown table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 9px 0;
+  font-size: 13px;
+  display: block;
+  overflow-x: auto;
+}
+
+.mehur-markdown th,
+.mehur-markdown td {
+  border: 1px solid var(--ivica);
+  padding: 6px 9px;
+  text-align: left;
+}
+
+.mehur-markdown th {
+  background: rgba(34, 211, 238, 0.07);
+}
+
+.mehur-markdown a {
+  color: var(--neon);
+}
+
 .poruka-korisnik .mehur {
   background: var(--neon);
   color: #04141a;

@@ -1,7 +1,8 @@
 import { Component, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { marked } from 'marked';
 
-import { ChatPoruka, IzvorInfo } from './models/chat.model';
+import { ChatPoruka, IzvorInfo, RanijaPoruka } from './models/chat.model';
 import { ChatService } from './services/chat.service';
 
 const PREDLOZENA_PITANJA = [
@@ -26,6 +27,12 @@ export class App {
   protected readonly greska = signal<string | null>(null);
 
   constructor(private chatService: ChatService) {}
+
+  // model odgovara u markdownu (**podebljano**, liste, naslovi), pa se to
+  // pretvara u HTML - Angular sam sanitizuje sadrzaj pri [innerHTML]
+  uHtml(tekst: string): string {
+    return marked.parse(tekst ?? '', { async: false }) as string;
+  }
 
   naTipku(dogadjaj: KeyboardEvent): void {
     // Enter salje, Shift+Enter pravi novi red
@@ -52,12 +59,17 @@ export class App {
       return;
     }
 
+    // istorija se uzima prije nego se novo pitanje doda u listu
+    const istorija: RanijaPoruka[] = this.poruke()
+      .slice(-6)
+      .map((p) => ({ uloga: p.tip, tekst: p.tekst }));
+
     this.poruke.update((trenutne) => [...trenutne, { tip: 'korisnik', tekst: tekstPitanja }]);
     this.pitanje.set('');
     this.ucitavanje.set(true);
     this.greska.set(null);
 
-    this.chatService.postaviPitanje(tekstPitanja).subscribe({
+    this.chatService.postaviPitanje(tekstPitanja, istorija).subscribe({
       next: (odgovor) => {
         this.poruke.update((trenutne) => [
           ...trenutne,

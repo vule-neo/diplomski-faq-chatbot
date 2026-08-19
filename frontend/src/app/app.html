@@ -33,7 +33,11 @@
     @for (poruka of poruke(); track $index) {
       <div class="poruka" [class.poruka-korisnik]="poruka.tip === 'korisnik'">
         <div class="mehur">
-          <p class="mehur-tekst">{{ poruka.tip === 'bot' ? (poruka.prikazano ?? poruka.tekst) : poruka.tekst }}</p>
+          @if (poruka.tip === 'bot') {
+            <div class="mehur-tekst mehur-markdown" [innerHTML]="uHtml(poruka.prikazano ?? poruka.tekst)"></div>
+          } @else {
+            <p class="mehur-tekst">{{ poruka.tekst }}</p>
+          }
 
           @if (poruka.tip === 'bot') {
             <div class="alatke">

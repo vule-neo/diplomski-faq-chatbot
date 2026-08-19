@@ -41,7 +41,34 @@ na to.
 
 Cijeli odgovor mora biti u jednom pismu, uključujući i dijelove koje prepisuješ iz
 dokumenata. Ako citiraš ili prepričavaš tekst napisan drugim pismom, preslovi ga —
-nikada ne miješaj latinicu i ćirilicu u istom odgovoru."""
+nikada ne miješaj latinicu i ćirilicu u istom odgovoru.
+
+Kako da razgovaraš sa studentom:
+
+Obraćaj se studentu neposredno i prirodno, kao osoba na šalteru koja hoće da pomogne —
+ne kao formular. Piši jednostavno, izbjegavaj nepotrebno administrativni ton.
+
+Vodi računa o prethodnim porukama u razgovoru. Ako student postavi kratko dopunsko
+pitanje ("a za master?", "a ako ne položim?"), razumij ga u kontekstu onoga o čemu ste
+već pričali.
+
+Kad ne znaš odgovor, nemoj samo odbiti. Reci šta jeste našao ako je iole povezano,
+i predloži kako student može doći do informacije. Uputstvo da se obrati studentskoj
+službi navedi samo kada zaista nemaš ništa korisno — ne kao automatski dodatak na
+svaki odgovor.
+
+Nije svaka poruka pitanje. Ako student samo potvrđuje da je razumio ("aha, jasno",
+"ok", "znači tako"), zahvaljuje se, pozdravlja ili komentariše — odgovori kratko i
+prirodno, kao u običnom razgovoru. U tom slučaju ne pretražuj kontekst, ne nabrajaj
+podatke ponovo i nemoj tražiti da precizira pitanje. Ako je student nešto pogrešno
+zaključio, ispravi ga u jednoj rečenici; ako je zaključio tačno, samo to potvrdi.
+
+Za pojašnjenje pitaj samo kada student **stvarno postavlja pitanje** koje može da se
+odnosi na više različitih stvari (npr. nije jasno da li ga zanimaju osnovne ili master
+studije). Nikada ne traži pojašnjenje na poruku koja uopšte nije pitanje.
+
+Ne moraš svaki put ponavljati odakle je podatak — izvori se korisniku ionako prikazuju
+odvojeno."""
 
 
 def izgradi_kontekst(chunkovi):
@@ -54,14 +81,34 @@ def izgradi_kontekst(chunkovi):
     return "\n\n---\n\n".join(dijelovi)
 
 
-def odgovori(pitanje, n_results=6):
-    chunkovi = pretrazi(pitanje, n_results=n_results)
+def _upit_za_pretragu(pitanje, istorija):
+    # kratka dopunska pitanja ("a za master?") sama po sebi nemaju dovoljno sadrzaja
+    # da se nesto nadje - zato im se pridruzi prethodno pitanje studenta
+    if not istorija or len(pitanje.split()) > 5:
+        return pitanje
+
+    ranija_pitanja = [p["tekst"] for p in istorija if p["uloga"] == "korisnik"]
+    if not ranija_pitanja:
+        return pitanje
+
+    return f"{ranija_pitanja[-1]} {pitanje}"
+
+
+def odgovori(pitanje, n_results=6, istorija=None):
+    istorija = istorija or []
+
+    chunkovi = pretrazi(_upit_za_pretragu(pitanje, istorija), n_results=n_results)
     kontekst = izgradi_kontekst(chunkovi)
 
-    poruke = [
-        {"role": "system", "content": SISTEM_PROMPT},
-        {"role": "user", "content": f"Kontekst:\n{kontekst}\n\nPitanje: {pitanje}"},
-    ]
+    poruke = [{"role": "system", "content": SISTEM_PROMPT}]
+
+    for ranija in istorija[-6:]:
+        uloga = "user" if ranija["uloga"] == "korisnik" else "assistant"
+        poruke.append({"role": uloga, "content": ranija["tekst"]})
+
+    poruke.append(
+        {"role": "user", "content": f"Kontekst:\n{kontekst}\n\nPitanje: {pitanje}"}
+    )
 
     odgovor = klijent.chat.completions.create(
         model="openai/gpt-oss-120b",

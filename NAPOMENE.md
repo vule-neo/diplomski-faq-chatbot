@@ -733,3 +733,62 @@ osnovu njih čovjek kasnije dopunjuje bazu znanja ili mijenja prompt.
 **`eval/metrike.py`** — čita ručne ocjene iz `rezultati.md` i generiše `eval/metrike.md`
 sa tabelama (ukupan rezultat, rezultat po kategorijama, retrieval hit rate, spisak
 netačnih odgovora sa obrazloženjem). Te tabele idu direktno u poglavlje o evaluaciji.
+
+## Prelazak sa "tačnog" na "upotrebljivog" asistenta
+
+Poslije evaluacije se pokazalo da sistem daje tačne odgovore, ali da u stvarnom
+razgovoru djeluje kruto. Sledeće izmjene ne poboljšavaju tačnost (ona je već izmjerena)
+nego upotrebljivost — ali su vrijedne pomena u radu jer pokazuju razliku između
+"sistem tehnički radi" i "sistem je upotrebljiv".
+
+### Pamćenje razgovora
+
+Do ovog trenutka je **svako pitanje obrađivano potpuno nezavisno** — dopunska pitanja
+tipa "a za master?" nisu imala smisla jer sistem nije znao o čemu se prethodno pričalo.
+
+Riješeno tako što se u `POST /ask` sada šalje i `istorija` (zadnjih 6 poruka), koje
+`odgovori()` prosljeđuje modelu kao prethodne poruke razgovora.
+
+**Bitno razlikovanje koje je pritom trebalo riješiti:** jedno je šta *model vidi*, a
+drugo šta ide u *pretragu dokumenata*. Ako bi se u pretragu slao cijeli razgovor, stare
+teme bi vukle rezultate u pogrešnom smjeru (npr. razgovor o školarini pa pitanje o
+ispitima). Ako se šalje samo tekuće pitanje, kratka dopunska pitanja ("a za master?")
+nemaju dovoljno sadržaja da bilo šta pronađu.
+
+Rješenje (`_upit_za_pretragu()`): za pretragu se koristi samo tekuće pitanje, **osim
+ako je kratko (do 5 riječi)** — tada mu se pridruži prethodno pitanje studenta. Tako
+"a za master?" u pretragu ode kao "Koliko ESPB treba za upis naredne godine? a za
+master?". Provjereno da radi.
+
+### Ton i ponašanje u razgovoru
+
+Sistemski prompt dopunjen uputstvima da se asistent obraća neposredno, da ne lijepi
+"obratite se studentskoj službi" na svaki odgovor nego samo kad zaista nema ništa
+korisno, i da može tražiti pojašnjenje kad je pitanje dvosmisleno.
+
+**Problem koji se odmah pojavio:** sistem je *svaku* poruku tretirao kao pitanje. Na
+studentovu potvrdu ("aha jasno, znači ukupno je cifra, oke") pretražio bi dokumente,
+ne bi našao ništa smisleno, pa bi tražio da student precizira pitanje — iako pitanja
+uopšte nije ni bilo. Isto bi se desilo na "hvala" ili "ok".
+
+Popravljeno dodatnim pravilom u promptu koje razdvaja poruke koje jesu pitanje od onih
+koje nisu (potvrda, zahvala, pozdrav, komentar): na ove druge odgovara kratko i
+prirodno, bez ponovnog nabrajanja podataka i bez traženja pojašnjenja; ako je student
+nešto pogrešno zaključio, ispravlja ga u jednoj rečenici. Provjereno — sada na gornju
+poruku odgovara sa "Da, tačno je. Ako ti treba još neka informacija, slobodno pitaj."
+
+### Prikaz markdowna
+
+Model odgovara u markdownu (podebljano, liste, tabele), a frontend je to prikazivao kao
+goli tekst — u odgovorima su se vidjele zvjezdice. Dodata biblioteka `marked`, odgovor
+se renderuje preko `[innerHTML]` (Angular sam sanitizuje sadržaj). Dodati stilovi za
+liste, podebljani tekst, naslove, kod i tabele unutar mjehura poruke.
+
+### Poznato ograničenje koje ovim NIJE riješeno
+
+Kratka i uopštena pitanja ("koliko košta školarina") i dalje ne pronalaze konkretan
+podatak, iako on postoji u korpusu — provjereno da je relevantan chunk tek na 38. i 41.
+mjestu. Razlog: riječ "školarina" se pojavljuje u desetinama chunkova (opšte odredbe
+pravilnika), pa cjenovnik sa stvarnim iznosom ne dolazi do vrha. Specifičnije
+formulisano pitanje ("školarina za samofinansirajuće studente") radi ispravno. Ovo je
+ista klasa problema kao A11 i D2 iz evaluacije i ostaje kao dokumentovano ograničenje.

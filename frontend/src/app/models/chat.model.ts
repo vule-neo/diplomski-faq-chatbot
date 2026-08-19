@@ -8,8 +8,14 @@ export interface OdgovorOdgovor {
   izvori: IzvorInfo[];
 }
 
+export interface RanijaPoruka {
+  uloga: 'korisnik' | 'bot';
+  tekst: string;
+}
+
 export interface PitanjeZahtev {
   pitanje: string;
+  istorija: RanijaPoruka[];
 }
 
 export interface FeedbackZahtev {
