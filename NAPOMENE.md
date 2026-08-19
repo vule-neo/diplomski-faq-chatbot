@@ -784,6 +784,62 @@ goli tekst — u odgovorima su se vidjele zvjezdice. Dodata biblioteka `marked`,
 se renderuje preko `[innerHTML]` (Angular sam sanitizuje sadržaj). Dodati stilovi za
 liste, podebljani tekst, naslove, kod i tabele unutar mjehura poruke.
 
+## Kritička analiza i tehničke popravke po njoj
+
+Rađena je zasebna kritička analiza sistema (`ANALIZA.md`) sa ciljem da se utvrdi šta
+nedostaje da bi sistem bio stvarno upotrebljiv, a ne samo tačan na test pitanjima.
+Glavni zaključak: **problem nije u arhitekturi nego u sadržaju baze znanja** — Zakon o
+visokom obrazovanju i Statut zajedno čine 46% korpusa, a dokument `Pitanja i odgovori`
+(jedini pisan za studente) svega 2.2%, iako se u testu na realnim pitanjima pojavio u
+15 od 48 dovučenih mjesta.
+
+Iz analize su odmah odrađene tri tehničke popravke:
+
+### 1. Uklonjeno smeće iz indeksa
+
+U `normalizuj()` dodata dva pravila: `SADRZAJ_REGEX` briše redove iz sadržaja dokumenta
+(naslov pa niz tačaka pa broj strane), a `NAVIGACIJA_REGEX` briše ostatke navigacije sa
+sajta (`NAVIGACIJA`, `Cenovnik | ETF`).
+
+**Važno zapažanje pri implementaciji:** prvobitna ideja je bila obrisati chunkove koji
+imaju malo slova u odnosu na dužinu. Provjerom se ispostavilo da bi to obrisalo
+**cjenovnik** — te chunkove su činile uglavnom cifre (cijene), a bili su označeni kao
+smeće samo zato što im je u tekst upala riječ "NAVIGACIJA". Umjesto brisanja chunkova,
+čiste se sporne linije unutar njih. Rezultat: smeće palo sa 48 na 6 chunkova, a svih 24
+chunka cjenovnika je sačuvano.
+
+Ukupno chunkova: 1063 → 1044.
+
+### 2. Povezane izmjene sa dokumentima koje mijenjaju
+
+Ovo je bio najozbiljniji rizik po tačnost iz analize: izmjene stoje kao zasebni
+dokumenti ("u članu 41. riječi ... zamjenjuju se riječima ..."), pa je sistem mogao
+servirati ukinutu odredbu kao važeću.
+
+Novi modul `src/ingest/izmjene.py` iz teksta izmjena regexom izvlači brojeve članova
+koji se mijenjaju i pravi mapu `data/processed/izmjene.json`. Prepoznato:
+- `Izmena statuta` → mijenja članove 32, 41, 56, 57, 62, 65, 76, 89, 118, 142, 149
+  Statuta
+- `Izmena_Pravilnika_o_OAS-2024` → član 69
+- `Izmena Pravilnika o OAS-2025` → članovi 26, 29, 44, 52
+
+Pri chunkovanju se na početak svakog chunka koji pripada izmijenjenom članu dodaje
+napomena da je član kasnije mijenjan i kojim dokumentom, uz uputstvo da se izvorni
+tekst ne navodi kao važeći bez provjere. Trenutno 22 chunka nosi takvo upozorenje.
+Provjereno: na pitanje o mentoru završnog rada, `Član 26` sada stiže do modela sa
+upozorenjem.
+
+Ovo nije potpuno rješenje (ispravno bi bilo ugraditi izmjene u prečišćen tekst), ali
+uklanja rizik da model tvrdi da stara odredba važi, a da to niko ne primijeti.
+
+### 3. Duplikati — provjereno, ispostavilo se da nisu problem
+
+Analiza je prvo navela da polovina konteksta odlazi na duplikate ("3/6 jedinstvenih").
+Provjerom po stvarnom tekstu utvrđeno je da su **svih 6 chunkova jedinstveni** — greška
+je bila u metrici, koja je brojala parove *(dokument, sekcija)*, a web-stranice i Q&A
+uopšte nemaju sekcije pa su različiti chunkovi izgledali kao isti unos. Ispravljeno u
+`ANALIZA.md`; nikakva izmjena koda nije bila potrebna.
+
 ### Poznato ograničenje koje ovim NIJE riješeno
 
 Kratka i uopštena pitanja ("koliko košta školarina") i dalje ne pronalaze konkretan

@@ -11,6 +11,36 @@ PREKLAPANJE_KARAKTERA = 250  # susjedni chunkovi dijele kraj prethodnog, da nabr
 
 NASLOV_H1_REGEX = re.compile(r'(?m)^# .+\n+')
 NASLOV_SEKCIJE_REGEX = re.compile(r'(?m)^## (.+)$')
+BROJ_CLANA_REGEX = re.compile(r'(\d+)')
+
+IZMJENE_PUTANJA = PROCESSED_DIR / "izmjene.json"
+
+
+def ucitaj_izmjene():
+    if not IZMJENE_PUTANJA.exists():
+        return {}
+    return json.loads(IZMJENE_PUTANJA.read_text(encoding="utf-8"))
+
+
+def upozorenje_o_izmjeni(izmjene, naslov_dokumenta, sekcija):
+    # ako je clan kasnije mijenjan, to mora da stoji uz sam tekst - inace model
+    # nema nacin da sazna da odredba koju cita vise ne vazi u tom obliku
+    if not sekcija or naslov_dokumenta not in izmjene:
+        return None
+
+    broj = BROJ_CLANA_REGEX.search(sekcija)
+    if not broj:
+        return None
+
+    dokumenti = izmjene[naslov_dokumenta].get(broj.group(1))
+    if not dokumenti:
+        return None
+
+    spisak = ", ".join(sorted(set(dokumenti)))
+    return (
+        f"[NAPOMENA: ovaj član je kasnije mijenjan dokumentom: {spisak}. "
+        f"Tekst ispod je izvorna verzija — provjeriti izmjene prije nego se navede kao važeći.]"
+    )
 
 
 def podijeli_na_sekcije(tekst):
@@ -80,7 +110,8 @@ def dodaj_preklapanje(grupe, preklapanje=PREKLAPANJE_KARAKTERA):
     return sa_preklapanjem
 
 
-def napravi_chunkove_za_dokument(folder):
+def napravi_chunkove_za_dokument(folder, izmjene=None):
+    izmjene = izmjene or {}
     tekst = (folder / "document.md").read_text(encoding="utf-8")
     metadata = json.loads((folder / "metadata.json").read_text(encoding="utf-8"))
 
@@ -95,6 +126,10 @@ def napravi_chunkove_za_dokument(folder):
             grupe = [sadrzaj]
         else:
             grupe = dodaj_preklapanje(podijeli_tekst_do_granice(sadrzaj, MAX_CHUNK_KARAKTERA))
+
+        napomena = upozorenje_o_izmjeni(izmjene, metadata["title"], naslov_sekcije)
+        if napomena:
+            grupe = [f"{napomena}\n{g}" for g in grupe]
 
         for grupa in grupe:
             redni_broj += 1
@@ -115,9 +150,11 @@ def main():
     svi_chunkovi = []
     broj_dokumenata = 0
 
+    izmjene = ucitaj_izmjene()
+
     for meta_putanja in sorted(PROCESSED_DIR.rglob("metadata.json")):
         folder = meta_putanja.parent
-        svi_chunkovi.extend(napravi_chunkove_za_dokument(folder))
+        svi_chunkovi.extend(napravi_chunkove_za_dokument(folder, izmjene))
         broj_dokumenata += 1
 
     izlazna_putanja = PROCESSED_DIR / "chunks.jsonl"

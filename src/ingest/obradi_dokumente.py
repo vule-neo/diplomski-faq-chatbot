@@ -21,7 +21,11 @@ BROJ_STRANE_REGEX = re.compile(r'^\d+/\d+$')
 ZIRO_RACUN_REGEX = re.compile(r'^\d{2,3}-\d{4,}-\d{2}$')
 SAMOSTALNA_STRANA_REGEX = re.compile(r'^\d{1,4}$')
 SAMO_INTERPUNKCIJA_REGEX = re.compile(r'^[\W_]{1,3}$')
-POZNATO_SMECE = {"Пријемни ЕТФ"}
+# red iz sadrzaja dokumenta: naslov pa niz tacaka pa broj strane
+SADRZAJ_REGEX = re.compile(r'\.{5,}\s*\d*\s*$')
+# ostaci navigacije sa sajta ("NAVIGACIJA", "Cenovnik | ETF", "Studentski odsek | ETF")
+NAVIGACIJA_REGEX = re.compile(r'^[^|]{1,60}\s\|\s*ETF\s*$')
+POZNATO_SMECE = {"Пријемни ЕТФ", "NAVIGACIJA"}
 
 
 def je_sken(putanja):
@@ -90,6 +94,10 @@ def normalizuj(tekst, naslov=None):
         if SAMO_INTERPUNKCIJA_REGEX.match(gola):
             continue
         if gola in POZNATO_SMECE:
+            continue
+        if SADRZAJ_REGEX.search(gola):
+            continue
+        if NAVIGACIJA_REGEX.match(gola):
             continue
         if naslov and gola == naslov:
             continue
