@@ -644,3 +644,92 @@ odvojeno.
 iz evaluacije prepiše u rad, treba provjeriti šta se tačno desilo u pojedinačnim
 slučajevima koji su ga pokvarili — ovdje bi zaključak "pretraga je oslabila" bio
 potpuno pogrešan.
+
+### Potrošena dnevna kvota i kako je riješeno
+
+Kompletna evaluacija je (zbog gornjih prekida) pokretana više puta iz početka, po
+~130k tokena po prolazu, i time je potrošen **dnevni limit Groq besplatnog tiera**
+(TPD 200.000 tokena). Bitno za razumijevanje: to nije limit po minuti nego **rolling
+prozor od 24h** — tokeni "ispadaju" iz računa 24 sata nakon potrošnje, ne resetuje se
+u ponoć. Kvota se oporavila sutradan u očekivanom terminu.
+
+*Popravka koja je ovo trajno riješila:* skripta sada **snima rezultat poslije svakog
+pitanja** i pri ponovnom pokretanju **preskače već odrađena pitanja**. Prekid više ne
+znači gubitak rada, a nema ni ponovnog trošenja kvote na pitanja koja su već gotova.
+Dodatno, `procitaj_postojece_ocjene()` čuva ručno unesene ocjene pri regenerisanju
+`rezultati.md` (inače bi se pri svakom nastavku brisale — provjereno testom).
+
+## Rezultati evaluacije (37 pitanja)
+
+Konačni prolaz: **37/37 pitanja, bez ijedne greške API-ja.**
+
+| Kategorija | Opis | Tačnost |
+|---|---|---|
+| A | osnovna pitanja u domenu | 10/12 (83%) |
+| B | pitanja koja traže uslov važenja | 5/6 (83%) |
+| C | pitanja van domena | **6/6 (100%)** |
+| D | djelimično pokrivena | 1/4 (25%) |
+| E | robusnost na formulaciju | **6/6 (100%)** |
+| F | otpornost na prompt injection | **3/3 (100%)** |
+
+**Ukupno: 31 tačno, 4 djelimično, 2 netačno — tačnost 84%.**
+**Retrieval hit rate: 28/29 (97%).**
+
+### Najvažniji nalaz za tezu #5
+
+**Nijedna halucinacija u 37 pitanja.** Obje netačne ocjene su *lažna odbijanja* —
+sistem je rekao "ne znam" iako odgovor postoji u korpusu:
+- **A11** (radno vrijeme studentskog odseka) — podatak postoji u Q&A dokumentu
+  ("Radno vreme šaltera je od 11-13h"), pretraga ga nije dovukla.
+- **D2** (disciplinska mjera za prepisivanje) — podatak postoji: Član 9 (korišćenje
+  nedozvoljenih sredstava = teža povreda) i Član 10 (mjere: zabrana polaganja,
+  privremeno udaljavanje, isključenje). Zanimljivo: pretraga je dovukla **pravi
+  dokument, ali pogrešne članove** (18, 20, 35 — proceduru žalbi umjesto spiska
+  prekršaja i kazni).
+
+Ovo je za rad povoljan tip greške: sistem radije ćuti nego što izmišlja. Ali pokazuje
+i granicu — hit rate na nivou dokumenta (97%) **precjenjuje** stvarni kvalitet, jer
+pogodak pravog dokumenta ne znači i pogodak pravog člana unutar njega. To je dobra
+tema za diskusiju u evaluaciji (i argument za mjerenje na nivou chunka, ne dokumenta).
+
+Kategorije C, E i F su 100%: sistem dosljedno odbija pitanja van domena (uključujući i
+trivijalno "koja je prestonica Francuske"), daje identične odgovore na latinicu,
+ćirilicu i tekst bez dijakritike, i ne da se navesti na izlazak iz uloge (ne odgovara
+ni na "koliko je 2+2" uz eksplicitan pokušaj promjene uloge).
+
+### Ispravka u samom skupu test pitanja
+
+Pri ocjenjivanju je otkriveno da je **očekivana napomena za B2 bila netačna** — u
+`pitanja.json` je pisalo da konkretan iznos školarine nije u korpusu, a jeste
+(282.000 din za Softversko inženjerstvo, 3.000 € za strane državljane — dokumenti
+`uslovi upisa - prijemni etf` i `Cenovnik _ ETF`). Odgovor sistema je bio tačan, pa je
+ocijenjen sa T. Pouka: i sam skup za evaluaciju treba provjeriti prema izvorima, ne
+samo odgovore sistema.
+
+## Feedback, logovanje upita i metrike
+
+**`src/api/evidencija.py`** — zajednički modul za upis u dva JSONL fajla, sa
+`threading.Lock` jer FastAPI može obrađivati više zahtjeva istovremeno nad istim
+fajlom:
+- `data/upiti.jsonl` — svako postavljeno pitanje (vrijeme, pitanje, odgovor, izvori) i
+  oznaka `odbijeno` koja se dobija prepoznavanjem fraza odbijanja u odgovoru
+  ("ne znam", "nemam informacij", i ćirilične varijante). Svrha: spisak tema koje
+  studenti traže a baza znanja ih ne pokriva — konkretna smjernica koje dokumente
+  dodati.
+- `data/feedback.jsonl` — ocjene korisnika (👍/👎) uz pitanje i odgovor.
+
+Oba fajla su u `.gitignore` (radni podaci, ne izvorni kod).
+
+**Novi endpoint `POST /feedback`**; `POST /ask` sada usput loguje upit.
+
+**Frontend:** dugmad 👍/👎 ispod svakog odgovora; poslije klika se zamjenjuju porukom
+"Hvala na oceni" i ne mogu se kliknuti dvaput. Ocjena se prikazuje odmah, ne čeka se
+potvrda servera — ako upis padne, student ionako ne može ništa da uradi povodom toga.
+
+*Važno za rad, da se ne prenaglasi:* ni feedback ni logovanje **ne poboljšavaju model
+sami po sebi** — model ne uči iz njih. To su mehanizmi za praćenje i održavanje: na
+osnovu njih čovjek kasnije dopunjuje bazu znanja ili mijenja prompt.
+
+**`eval/metrike.py`** — čita ručne ocjene iz `rezultati.md` i generiše `eval/metrike.md`
+sa tabelama (ukupan rezultat, rezultat po kategorijama, retrieval hit rate, spisak
+netačnih odgovora sa obrazloženjem). Te tabele idu direktno u poglavlje o evaluaciji.

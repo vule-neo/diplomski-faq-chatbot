@@ -1,40 +1,78 @@
+<div class="pozadina">
+  <span class="mrlja mrlja-1"></span>
+  <span class="mrlja mrlja-2"></span>
+  <span class="mrlja mrlja-3"></span>
+</div>
+
 <div class="app-shell">
   <header class="header">
-    <div class="header-content">
-      <div class="header-znak">ETF</div>
-      <div class="header-tekst">
-        <h1>Studentska služba — Asistent</h1>
-        <p>Pitaj o upisu, ispitima, školarini i pravilnicima</p>
-      </div>
+    <div class="header-znak">ETF</div>
+    <div class="header-tekst">
+      <h1>Studentska služba</h1>
+      <p>Pitaj o upisu, ispitima, školarini i pravilnicima</p>
     </div>
   </header>
 
   <main class="chat-area">
     @if (poruke().length === 0) {
       <div class="prazno-stanje">
-        <p>👋 Postavi pitanje, npr. <em>„Koji su rokovi za prijavu ispita?"</em></p>
+        <div class="prazno-ikona">💬</div>
+        <h2>Kako mogu da pomognem?</h2>
+        <p>Odgovaram isključivo na osnovu zvaničnih dokumenata fakulteta.</p>
+
+        <div class="predlozi">
+          @for (predlog of predlozi; track predlog) {
+            <button class="predlog" [style.animation-delay]="$index * 70 + 'ms'" (click)="koristiPredlog(predlog)">
+              {{ predlog }}
+            </button>
+          }
+        </div>
       </div>
     }
 
     @for (poruka of poruke(); track $index) {
-      <div class="poruka" [class.poruka-korisnik]="poruka.tip === 'korisnik'" [class.poruka-bot]="poruka.tip === 'bot'">
+      <div class="poruka" [class.poruka-korisnik]="poruka.tip === 'korisnik'">
         <div class="mehur">
-          <p class="mehur-tekst">{{ poruka.tekst }}</p>
-          @if (poruka.izvori && poruka.izvori.length > 0) {
-            <div class="izvori">
-              @for (izvor of poruka.izvori; track $index) {
-                <span class="izvor-oznaka">
-                  {{ izvor.naslov_dokumenta }}{{ izvor.sekcija ? ', ' + izvor.sekcija : '' }}
+          <p class="mehur-tekst">{{ poruka.tip === 'bot' ? (poruka.prikazano ?? poruka.tekst) : poruka.tekst }}</p>
+
+          @if (poruka.tip === 'bot') {
+            <div class="alatke">
+              @if (poruka.ocjena) {
+                <span class="alatka alatka-ocijenjeno">
+                  {{ poruka.ocjena === 'koristan' ? '👍 Hvala na oceni' : '👎 Hvala na oceni' }}
                 </span>
+              } @else {
+                <button class="alatka alatka-palac" (click)="ocijeni($index, true)" title="Koristan odgovor">👍</button>
+                <button class="alatka alatka-palac" (click)="ocijeni($index, false)" title="Nekoristan odgovor">👎</button>
+              }
+
+              <button class="alatka" (click)="kopirajOdgovor($index)">
+                {{ poruka.kopirano ? '✓ Kopirano' : 'Kopiraj' }}
+              </button>
+
+              @if (poruka.izvori && poruka.izvori.length > 0) {
+                <button class="alatka" (click)="prebaciIzvore($index)">
+                  {{ poruka.izvoriOtvoreni ? 'Sakrij izvore' : 'Izvori (' + poruka.izvori.length + ')' }}
+                </button>
               }
             </div>
+
+            @if (poruka.izvoriOtvoreni && poruka.izvori) {
+              <div class="izvori">
+                @for (izvor of poruka.izvori; track $index) {
+                  <span class="izvor-oznaka" [style.animation-delay]="$index * 45 + 'ms'">
+                    {{ izvor.naslov_dokumenta }}{{ izvor.sekcija ? ' · ' + izvor.sekcija : '' }}
+                  </span>
+                }
+              </div>
+            }
           }
         </div>
       </div>
     }
 
     @if (ucitavanje()) {
-      <div class="poruka poruka-bot">
+      <div class="poruka">
         <div class="mehur mehur-ucitavanje">
           <span class="tacka"></span><span class="tacka"></span><span class="tacka"></span>
         </div>
@@ -61,8 +99,9 @@
       class="dugme-posalji"
       (click)="posaljiPitanje()"
       [disabled]="ucitavanje() || !pitanje().trim()"
+      title="Pošalji (Enter)"
     >
-      Pošalji
+      <span class="strelica">↑</span>
     </button>
   </footer>
 </div>

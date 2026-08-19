@@ -7,8 +7,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 from llm.rag import odgovori
 from retrieval.pretraga import pretrazi
+from evidencija import zabiljezi_upit, zabiljezi_feedback
 
 
 @asynccontextmanager
@@ -41,6 +43,12 @@ class OdgovorOdgovor(BaseModel):
     izvori: list[IzvorInfo]
 
 
+class FeedbackZahtev(BaseModel):
+    pitanje: str = Field(..., min_length=1)
+    odgovor: str = Field(..., min_length=1)
+    koristan: bool
+
+
 @app.get("/health")
 def health():
     return {"status": "ok"}
@@ -61,4 +69,16 @@ def ask(zahtev: PitanjeZahtev):
         for c in chunkovi
     ]
 
+    zabiljezi_upit(
+        zahtev.pitanje,
+        odgovor,
+        [f"{i.naslov_dokumenta} / {i.sekcija}".strip(" /") for i in izvori],
+    )
+
     return OdgovorOdgovor(odgovor=odgovor, izvori=izvori)
+
+
+@app.post("/feedback")
+def feedback(zahtev: FeedbackZahtev):
+    zabiljezi_feedback(zahtev.pitanje, zahtev.odgovor, zahtev.koristan)
+    return {"status": "zabilježeno"}

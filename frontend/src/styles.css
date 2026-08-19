@@ -7,5 +7,25 @@ body {
   height: 100%;
   margin: 0;
   font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-  background: #f4f5f9;
+  background: #0b0f17;
+  color: #e6edf3;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* diskretniji skrol, da ne kvari cist izgled */
+::-webkit-scrollbar {
+  width: 9px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #2a3444;
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #3a4759;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
 }

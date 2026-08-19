@@ -67,11 +67,12 @@ faq-chatbot/
 - [x] **Faza 4 — RAG pipeline:** spajanje retrieval + generisanje, prompt "odgovori samo iz konteksta,
       ako ne znaš — reci da ne znaš"
 - [x] **Faza 5 — FastAPI backend:** endpoint `/ask`, testiranje kroz `/docs`
-- [ ] **Faza 6 — Angular frontend:** chat komponenta, HTTP poziv ka backendu
+- [x] **Faza 6 — Angular frontend:** chat komponenta, HTTP poziv ka backendu
 - [ ] **Faza 7 — Evaluacija:** 20-30 test pitanja (uključujući "trik" pitanja van FAQ-a), mjerenje
       tačnosti, dugme feedback (koristan/nekoristan odgovor) + logovanje nepoznatih pitanja
 
-**Trenutna faza: Faza 6 — Angular frontend**
+**Trenutna faza: Faza 7 — Evaluacija** (test pitanja odrađena i ocjenjuju se; preostaje
+feedback dugme, logovanje pitanja i sračunavanje metrika)
 
 ## Kako Claude treba da radi na ovom projektu
 
