@@ -116,11 +116,9 @@ feedback dugme, logovanje pitanja i sračunavanje metrika)
 
 ## Dokumenti / izvori baze znanja
 
-*(Popuniti kad student završi prikupljanje: lista dokumenata, izvor, datum preuzimanja)*
-
-| Naziv dokumenta | Izvor | Datum preuzimanja | Napomena |
-|---|---|---|---|
-| | | | |
+Spisak svih 29 dokumenata je u `data/raw/IZVORI.md` (namjerno tamo, a ne ovdje — taj
+fajl ostaje poslije predaje i koristi se za tezu #2). Popunjen je nazivima, kategorijama
+i načinom obrade (tekst/OCR); **student treba da dopuni kolone Izvor i Datum preuzimanja**.
 
 ## Napomene / odluke tokom rada
 
