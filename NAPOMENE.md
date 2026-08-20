@@ -895,6 +895,36 @@ Francuske?") i dalje ispravno odbija — dakle pravilo nije olabavilo zaštitu.
 oko 4 sekunde po pitanju, što je glavna mana ovog pristupa i razlog zašto je sledeći
 korak streaming odgovora (da korisnik ne gleda u prazno dok se čeka).
 
+## Dopuna baze znanja praktičnim dokumentima
+
+Po nalazu iz `ANALIZA.md` (baza je bila pravnički, a ne studentski orijentisana) dodata
+su tri dokumenta koja pokrivaju ono što je najviše falilo:
+
+1. **Kalendar nastave 2025/26** — ispitni rokovi sa tačnim datumima, rok za završetak
+   obaveza (30.09.2026.), nadoknade nastave, objašnjenje pojmova.
+2. **Studentski odsek — kontakti** — radno vrijeme šaltera (11-13h) i telefona (9-11h),
+   soba 92, te tabela ko je za šta nadležan sa telefonom i mejlom.
+3. **Predmeti — RTI** — svi predmeti po semestrima od druge do četvrte godine, sa
+   šifrom, statusom (obavezan/izborni), časovima i ESPB bodovima.
+
+**Zašto su rađeni ručno, a ne kroz PDF pipeline:** kalendar je u originalu grafička
+tabela (mreža datuma) — iz nje `fitz` izvlači samo nepovezan niz brojeva i slova, bez
+ikakvog smisla. Upotrebljiv je bio samo tekstualni dio sa legendom. Slično, spisak
+predmeta i kontakti se iz PDF-a izvlače kao niz linija u kojima se gubi veza
+red-kolona (npr. koji ESPB pripada kom predmetu, koji telefon kojoj osobi).
+
+Zato su podaci pročitani iz originalnih PDF-ova i prepisani u čist markdown sa pravim
+tabelama. Originalni PDF-ovi su zadržani u `data/raw/dopuna/` sa ekstenzijom `.bak`,
+da postoji trag odakle podaci potiču, a da ih pipeline ne obrađuje duplo.
+
+**Rezultat** — pitanja koja prije uopšte nisu bila moguća sada rade:
+- "Kad je septembarski ispitni rok?" → *"od 14. do 20. septembra 2026."*
+- "Kome da se obratim za odbranu diplomskog rada?" → upućuje na mentora pa na
+  Studentski odsek
+- "Koliko ESPB nosi Arhitektura računara?" → *"6 ESPB"*
+
+Korpus: 1063 chunka iz 32 dokumenta.
+
 ### Poznato ograničenje koje ovim NIJE riješeno
 
 Kratka i uopštena pitanja ("koliko košta školarina") i dalje ne pronalaze konkretan
