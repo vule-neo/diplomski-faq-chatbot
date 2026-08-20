@@ -102,7 +102,7 @@ def _upit_za_pretragu(pitanje, istorija):
     return f"{ranija_pitanja[-1]} {pitanje}"
 
 
-def odgovori(pitanje, n_results=6, istorija=None):
+def odgovori(pitanje, n_results=10, istorija=None):
     istorija = istorija or []
 
     chunkovi = pretrazi(_upit_za_pretragu(pitanje, istorija), n_results=n_results)

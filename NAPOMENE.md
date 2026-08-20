@@ -978,6 +978,64 @@ završilo u polju `reasoning`. To je poznato ponašanje modela sa razmišljanjem
 *Rješenje:* ako je sadržaj prazan, poziv se ponavlja jednom sa nešto većom
 temperaturom; ako i tada bude prazan, vraća se jasna poruka umjesto praznine.
 
+## Druga evaluacija (poslije svih poboljšanja)
+
+| | Prva evaluacija | Druga evaluacija |
+|---|---|---|
+| Tačnost | 31/37 (84%) | **32/37 (86%)** |
+| **Netačni odgovori** | **2** | **0** |
+| Retrieval hit rate | 28/29 (97%) | **29/29 (100%)** |
+
+Po kategorijama: A 83%→92%, B 83%→67%, C 100%→100%, D 25%→50%, E 100%→100%,
+F 100%→100%.
+
+**Najvažnije: nema više nijednog netačnog odgovora.** Oba ranija lažna odbijanja (A11
+radno vrijeme, D2 disciplinska mjera) su riješena. Popravljeni su i A1 (sada pokriva i
+48 ESPB i 51 bod), B3 (i budžet i samofinansiranje), D3 (formula), te D1 gdje sistem
+umjesto odbijanja sada daje tačan rok za odbranu završnog rada (provjereno u Članu 26).
+
+### Nova regresija: nedosljedno pismo
+
+Tri odgovora (A6, B4, D2) miješaju latinicu i ćirilicu, a B4 je *cijeli* na ćirilici
+iako je pitanje postavljeno latinicom. Sadržaj je tačan, ali forma nije. Uzrok je
+vjerovatno to što je sistemski prompt u međuvremenu narastao (pravila o tonu,
+potvrdama, sinonimima), pa se pravilo o pismu "razvodnilo" među ostalima. Ovo je jedini
+razlog pada kategorije B sa 83% na 67%.
+
+### Regresija u sadržaju: B1 nije nabrajao module
+
+Ozbiljniji problem od pisma: na pitanje o smjerovima sistem više nije nabrajao šest
+modula, nego samo pod-smjerove.
+
+Dijagnoza je pokazala da chunk sa spiskom modula **jeste** na 5. mjestu u brzoj
+pretrazi, ali ga **reranker izbacuje** — isti obrazac kao ranije kod kontakata: reranker
+loše rangira sadržaj u obliku spiska ili tabele.
+
+*Pokušaj 1:* garantovati da reranker ne smije izbaciti prva tri pogotka brze pretrage
+(`GARANTOVANO_IZ_BRZE_PRETRAGE = 3`). Nije bilo dovoljno jer je traženi chunk bio peti.
+
+*Rješenje:* broj chunkova koji se šalju modelu podignut sa 6 na 10. Provjereno — sistem
+sada nabraja svih šest modula i navodi uslov za studente upisane prije 2020/21.
+
+### Koliko reranker zaista vrijedi
+
+Mjereno na dva načina, jer je rezultat različit:
+
+| Mjereno na | Bez rerankera | Sa rerankerom |
+|---|---|---|
+| skup od 29 test pitanja | 29/29 | 29/29 |
+| pet "teških" pitanja | 3/5 | **5/5** |
+
+Zaključak: na zvaničnom skupu test pitanja reranker **ne donosi mjerljivu razliku** kada
+se šalje 10 chunkova — oba pristupa su savršena. Razliku pravi tek na težim pitanjima
+(školarina, disciplinska mjera), gdje dobija dva od pet. Cijena je oko 2.8 sekundi po
+upitu.
+
+Ovo je poučno i za sam rad: **skup test pitanja je bio prelagan da izmjeri ovu izmjenu.**
+Da se sudilo samo po njemu, zaključak bi bio "reranker ništa ne mijenja", što nije
+tačno. Kod ocjenjivanja poboljšanja treba paziti da mjerni instrument uopšte može da
+uhvati razliku koja se traži.
+
 ### Poznato ograničenje koje ovim NIJE riješeno
 
 Kratka i uopštena pitanja ("koliko košta školarina") i dalje ne pronalaze konkretan

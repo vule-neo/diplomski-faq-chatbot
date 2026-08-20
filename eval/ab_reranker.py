@@ -17,7 +17,7 @@ import retrieval.pretraga as P
 
 EVAL_DIR = Path(__file__).resolve().parent
 IZVJESTAJ = EVAL_DIR / "ab_reranker.md"
-BROJ_IZVORA = 6
+BROJ_IZVORA = 10
 
 
 def pogodak(stavka, chunkovi):

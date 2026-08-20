@@ -25,6 +25,8 @@ BROJ_ZA_RERANK = 40
 # Duzi tekst rerankeru ne donosi nista, a duplo je sporiji: sa 512 tokena
 # prosjek je bio 9.0s, sa 192 tokena 4.7s, uz identicne rezultate.
 RERANKER_MAX_TOKENA = 192
+# koliko najboljih iz brze pretrage reranker ne smije da izbaci
+GARANTOVANO_IZ_BRZE_PRETRAGE = 3
 KORISTI_RERANKER = True
 
 _model = None
@@ -113,7 +115,20 @@ def pretrazi(upit, n_results=4):
         for rang, chunk_id in enumerate(rerank_poredak):
             spojeni[chunk_id] = spojeni.get(chunk_id, 0) + 1 / (RRF_KONSTANTA + rang + 1)
 
-        poredani_idevi = sorted(spojeni, key=spojeni.get, reverse=True)[:n_results]
+        spojeni_poredak = sorted(spojeni, key=spojeni.get, reverse=True)
+
+        # Reranker i dalje zna da izbaci tacan chunk kad je u obliku spiska ili
+        # tabele. Zato prva tri pogotka brze pretrage imaju zagarantovano mjesto -
+        # reranker smije da mijenja redoslijed, ali ne i da ih ukloni.
+        zagarantovani = kandidati[:GARANTOVANO_IZ_BRZE_PRETRAGE]
+        konacni = list(zagarantovani)
+        for chunk_id in spojeni_poredak:
+            if len(konacni) >= n_results:
+                break
+            if chunk_id not in konacni:
+                konacni.append(chunk_id)
+
+        poredani_idevi = sorted(konacni, key=lambda i: spojeni.get(i, 0), reverse=True)
         skorovi = spojeni
     else:
         poredani_idevi = poredani_idevi[:n_results]
