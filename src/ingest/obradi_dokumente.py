@@ -128,18 +128,26 @@ def slugify(ime):
 def obradi_fajl(putanja):
     rel = putanja.relative_to(RAW_DIR)
     kategorija = rel.parts[0]
+    je_tekstualni = putanja.suffix.lower() in (".md", ".txt")
 
-    if je_sken(putanja):
+    if not je_tekstualni and je_sken(putanja):
         print(f"preskacem (sken, ceka OCR): {rel}")
         return
 
     naslov = putanja.stem
 
-    tekst = izvuci_tekst(putanja)
-    tekst = strukturiraj(tekst)
-    tekst = normalizuj(tekst, naslov=naslov)
+    if je_tekstualni:
+        # rucno pisani dokumenti (npr. prekucane tabele sa sajta) - vec su cisti,
+        # ne treba im ni normalizacija ni vadjenje tabela
+        tekst = putanja.read_text(encoding="utf-8")
+        tekst = strukturiraj(tekst)
+        tabele = []
+    else:
+        tekst = izvuci_tekst(putanja)
+        tekst = strukturiraj(tekst)
+        tekst = normalizuj(tekst, naslov=naslov)
+        tabele = izvuci_prave_tabele(putanja)
 
-    tabele = izvuci_prave_tabele(putanja)
     if tabele:
         tekst += "\n\n## Tabele\n\n"
         for tabela in tabele:
@@ -154,7 +162,7 @@ def obradi_fajl(putanja):
     metadata = {
         "title": naslov,
         "category": kategorija,
-        "source_type": "pdf",
+        "source_type": putanja.suffix.lower().lstrip("."),
         "original_file": str(rel),
         "ima_tabele": len(tabele) > 0,
     }
@@ -166,7 +174,10 @@ def obradi_fajl(putanja):
 
 
 def main():
-    pdfovi = sorted(RAW_DIR.rglob("*.pdf"))
+    pdfovi = sorted(
+        p for p in RAW_DIR.rglob("*")
+        if p.suffix.lower() in (".pdf", ".md", ".txt") and p.name != "IZVORI.md"
+    )
     for putanja in pdfovi:
         try:
             obradi_fajl(putanja)
