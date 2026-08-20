@@ -840,6 +840,61 @@ je bila u metrici, koja je brojala parove *(dokument, sekcija)*, a web-stranice 
 uopšte nemaju sekcije pa su različiti chunkovi izgledali kao isti unos. Ispravljeno u
 `ANALIZA.md`; nikakva izmjena koda nije bila potrebna.
 
+## Reranker (drugi krug rangiranja)
+
+Do sada je pretraga radila u jednom koraku: hibridna pretraga (embedding + BM25) spoji
+rezultate RRF-om i prvih 6 pošalje modelu. Problem: ni embedding ni BM25 ne "čitaju"
+pitanje zajedno sa tekstom — embedding poredi vektore, BM25 broji riječi. Zato su
+dovlačili tekst koji je *o istoj temi*, ali ne odgovara na pitanje.
+
+Dodat je drugi korak: iz brze pretrage se uzme 40 kandidata, a **cross-encoder** model
+(`cross-encoder/mmarco-mMiniLMv2-L12-H384-v1`, višejezični, radi lokalno) ocijeni svaki
+par (pitanje, chunk) zajedno i odabere najboljih 6.
+
+### Mjerenja pri podešavanju
+
+Provjera je rađena na tri pitanja koja su ranije padala (A11, D2, školarina):
+
+| Konfiguracija | Riješeno | Vrijeme |
+|---|---|---|
+| bez rerankera | — | 0.03s |
+| pool 15 | — | 2.8s |
+| pool 30 | D2 | 5.8s |
+| pool 50, max_length 512 | D2, školarina | 9.0s |
+| **pool 40, max_length 192** | **D2, školarina** | **3.9s** |
+
+Ključno zapažanje: **skraćivanje teksta koji ide rerankeru sa 512 na 192 tokena
+prepolovilo je vrijeme bez ikakvog gubitka tačnosti** (9.0s → 4.7s, isti rezultati).
+Relevantan dio chunka je gotovo uvijek na početku. Zato je izabrano `max_length=192` i
+`batch_size=64`.
+
+Provjereno i da reranker **ne kvari** ono što je ranije radilo — poređenjem sa
+osnovnom verzijom na istim pitanjima nema nijedne regresije.
+
+### Nalaz: A11 nije bio problem pretrage nego prestroge doslovnosti
+
+Nakon uvođenja rerankera, pitanje o radnom vremenu studentskog odseka je i dalje
+vraćalo "ne znam" — iako je chunk sa odgovorom bio na **prvom mjestu** i doslovno
+sadržao "Radno vreme šaltera je od 11-13h".
+
+Uzrok: pitanje kaže "studentskog **odseka**", a dokument "studentske **službe**". Model
+je to tretirao kao dvije različite stvari i odbio da odgovori — anti-halucinaciono
+pravilo primijenjeno prestrogo.
+
+Popravljeno dodatnim pravilom u promptu: ako je iz konteksta očigledno da je riječ o
+istom pojmu pod drugim nazivom (odsek/služba, školarina/troškovi studija, smjer/modul,
+završni/diplomski rad), taj podatak treba iskoristiti umjesto odbiti. Izričito je
+naglašeno da se pravilo odnosi **samo na prepoznavanje istog pojma**, a ne na sadržaj
+odgovora.
+
+Provjereno poslije izmjene: na isto pitanje odgovara "Radno vreme studentskog odseka
+(šalter) je od 11 h do 13 h", a kontrolno pitanje van domena ("Koja je prestonica
+Francuske?") i dalje ispravno odbija — dakle pravilo nije olabavilo zaštitu.
+
+**Sva tri ranije poznata promašaja (A11, D2, školarina) su time riješena.** Cijena je
+oko 4 sekunde po pitanju, što je glavna mana ovog pristupa i razlog zašto je sledeći
+korak streaming odgovora (da korisnik ne gleda u prazno dok se čeka).
+
 ### Poznato ograničenje koje ovim NIJE riješeno
 
 Kratka i uopštena pitanja ("koliko košta školarina") i dalje ne pronalaze konkretan

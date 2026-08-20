@@ -5,21 +5,30 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import chromadb
 from rank_bm25 import BM25Okapi
-from sentence_transformers import SentenceTransformer
+from sentence_transformers import CrossEncoder, SentenceTransformer
 
 from normalizacija import u_latinicu, za_pretragu_kljucnim_rijecima
 
 BAZA_PUTANJA = Path(__file__).resolve().parent.parent.parent / "data" / "chroma_db"
 KOLEKCIJA_NAZIV = "dokumenti"
 MODEL_NAZIV = "paraphrase-multilingual-MiniLM-L12-v2"
+RERANKER_NAZIV = "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1"
 
-VELICINA_BAZENA = 30  # koliko kandidata uzeti iz svakog pristupa prije spajanja
+VELICINA_BAZENA = 40  # koliko kandidata uzeti iz svakog pristupa prije spajanja
 RRF_KONSTANTA = 15  # standardno 60, ali to je podeseno za ogromne (web) kolekcije;
                      # na nasem malom korpusu (~1000 chunkova) manja vrijednost daje
                      # vise tezine jakom pogotku iz samo jednog pristupa (npr. BM25
                      # tacno pogodi kljucni pojam a dense ga uopste ne rangira visoko)
 
+# koliko kandidata iz brze pretrage ide rerankeru na ocjenjivanje
+BROJ_ZA_RERANK = 40
+# Duzi tekst rerankeru ne donosi nista, a duplo je sporiji: sa 512 tokena
+# prosjek je bio 9.0s, sa 192 tokena 4.7s, uz identicne rezultate.
+RERANKER_MAX_TOKENA = 192
+KORISTI_RERANKER = True
+
 _model = None
+_reranker = None
 _kolekcija = None
 _bm25 = None
 _bm25_ids = None
@@ -44,6 +53,13 @@ def _ucitaj():
         _bm25 = BM25Okapi(tokenizovani)
 
     return _model, _kolekcija
+
+
+def _ucitaj_reranker():
+    global _reranker
+    if _reranker is None:
+        _reranker = CrossEncoder(RERANKER_NAZIV, max_length=RERANKER_MAX_TOKENA)
+    return _reranker
 
 
 def _dense_rang_liste(upit, n):
@@ -73,7 +89,21 @@ def pretrazi(upit, n_results=4):
     for rang, chunk_id in enumerate(bm25_ids):
         skorovi[chunk_id] = skorovi.get(chunk_id, 0) + 1 / (RRF_KONSTANTA + rang + 1)
 
-    poredani_idevi = sorted(skorovi, key=skorovi.get, reverse=True)[:n_results]
+    poredani_idevi = sorted(skorovi, key=skorovi.get, reverse=True)
+
+    if KORISTI_RERANKER and len(poredani_idevi) > n_results:
+        # brza pretraga samo grubo suzava izbor; reranker cita pitanje i chunk
+        # zajedno i ocjenjuje da li tekst zaista odgovara na pitanje
+        kandidati = poredani_idevi[:BROJ_ZA_RERANK]
+        reranker = _ucitaj_reranker()
+        ocjene = reranker.predict(
+            [(upit, _dokumenti_po_idu[i]) for i in kandidati], batch_size=64
+        )
+        poredani = sorted(zip(kandidati, ocjene), key=lambda p: p[1], reverse=True)
+        poredani_idevi = [i for i, _ in poredani[:n_results]]
+        skorovi = {i: float(o) for i, o in poredani}
+    else:
+        poredani_idevi = poredani_idevi[:n_results]
 
     chunkovi = []
     for chunk_id in poredani_idevi:
