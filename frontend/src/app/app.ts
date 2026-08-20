@@ -26,6 +26,9 @@ export class App {
   protected readonly ucitavanje = signal(false);
   protected readonly greska = signal<string | null>(null);
 
+  private bafer = '';
+  private tajmerIspisa: ReturnType<typeof setInterval> | null = null;
+
   constructor(private chatService: ChatService) {}
 
   // model odgovara u markdownu (**podebljano**, liste, naslovi), pa se to
@@ -69,27 +72,91 @@ export class App {
     this.ucitavanje.set(true);
     this.greska.set(null);
 
-    this.chatService.postaviPitanje(tekstPitanja, istorija).subscribe({
-      next: (odgovor) => {
-        this.poruke.update((trenutne) => [
-          ...trenutne,
-          {
-            tip: 'bot',
-            tekst: odgovor.odgovor,
-            prikazano: '',
-            izvori: this.bezDuplikata(odgovor.izvori),
-            izvoriOtvoreni: false,
-            pitanje: tekstPitanja,
-          },
-        ]);
-        this.ucitavanje.set(false);
-        this.animirajKucanje(this.poruke().length - 1);
-      },
-      error: () => {
-        this.greska.set('Nije moguće dobiti odgovor. Provjeri da li backend radi, pa pokušaj ponovo.');
-        this.ucitavanje.set(false);
-      },
-    });
+    this.primiOdgovor(tekstPitanja, istorija);
+  }
+
+  private async primiOdgovor(tekstPitanja: string, istorija: RanijaPoruka[]): Promise<void> {
+    let indeks = -1;
+    let izvori: IzvorInfo[] = [];
+
+    try {
+      for await (const dogadjaj of this.chatService.postaviPitanjeUDijelovima(
+        tekstPitanja,
+        istorija,
+      )) {
+        if (dogadjaj.vrsta === 'izvori') {
+          // izvori stizu prije prvog slova odgovora - cuvaju se dok tekst ne krene,
+          // da se ne pojavi prazan mjehur
+          izvori = this.bezDuplikata(dogadjaj.izvori);
+        } else if (dogadjaj.vrsta === 'tekst') {
+          if (indeks < 0) {
+            this.poruke.update((trenutne) => [
+              ...trenutne,
+              {
+                tip: 'bot',
+                tekst: '',
+                prikazano: '',
+                izvori,
+                izvoriOtvoreni: false,
+                pitanje: tekstPitanja,
+              },
+            ]);
+            indeks = this.poruke().length - 1;
+            this.ucitavanje.set(false);
+          }
+          this.dodajUBafer(indeks, dogadjaj.tekst);
+        } else if (dogadjaj.vrsta === 'greska') {
+          throw new Error(dogadjaj.poruka);
+        }
+      }
+    } catch (e) {
+      this.greska.set(this.objasniGresku(e));
+    } finally {
+      this.ucitavanje.set(false);
+    }
+  }
+
+  private objasniGresku(e: unknown): string {
+    const poruka = e instanceof Error ? e.message : String(e);
+
+    if (poruka.includes('tokens per day') || poruka.includes('TPD')) {
+      return 'Dostignuto je dnevno ograničenje besplatnog naloga za jezički model. Odgovori će ponovo raditi kada se ograničenje obnovi.';
+    }
+    if (poruka.includes('429') || poruka.toLowerCase().includes('rate limit')) {
+      return 'Previše pitanja u kratkom roku. Sačekaj koji trenutak pa pokušaj ponovo.';
+    }
+    if (poruka.includes('Failed to fetch') || poruka.includes('NetworkError')) {
+      return 'Nije moguće doći do servera. Provjeri da li backend radi, pa pokušaj ponovo.';
+    }
+    return 'Došlo je do greške pri dobijanju odgovora. Pokušaj ponovo.';
+  }
+
+  // Model salje tekst u naletima, pa bi se odgovor pojavljivao u skokovima.
+  // Zato se prvo skuplja u bafer, a odatle isporucuje ravnomjerno.
+  private dodajUBafer(indeks: number, tekst: string): void {
+    this.bafer += tekst;
+    if (this.tajmerIspisa !== null) {
+      return;
+    }
+
+    this.tajmerIspisa = setInterval(() => {
+      if (!this.bafer) {
+        clearInterval(this.tajmerIspisa!);
+        this.tajmerIspisa = null;
+        return;
+      }
+
+      // sto vise zaostajemo, to brze ispisujemo - da odgovor ne kasni za modelom
+      const korak = Math.max(2, Math.ceil(this.bafer.length / 10));
+      const dio = this.bafer.slice(0, korak);
+      this.bafer = this.bafer.slice(korak);
+
+      this.izmijeniPoruku(indeks, (p) => ({
+        ...p,
+        tekst: p.tekst + dio,
+        prikazano: p.tekst + dio,
+      }));
+    }, 25);
   }
 
   ocijeni(indeks: number, koristan: boolean): void {
@@ -128,23 +195,6 @@ export class App {
       vidjeni.add(kljuc);
       return true;
     });
-  }
-
-  // postepeno otkrivanje teksta, da odgovor "dolazi" umjesto da bljesne odjednom
-  private animirajKucanje(indeks: number): void {
-    const puniTekst = this.poruke()[indeks].tekst;
-    const korak = Math.max(1, Math.round(puniTekst.length / 200));
-    let otkriveno = 0;
-
-    const tajmer = setInterval(() => {
-      otkriveno = Math.min(puniTekst.length, otkriveno + korak);
-      const dio = puniTekst.slice(0, otkriveno);
-      this.izmijeniPoruku(indeks, (p) => ({ ...p, prikazano: dio }));
-
-      if (otkriveno >= puniTekst.length) {
-        clearInterval(tajmer);
-      }
-    }, 14);
   }
 
   private izmijeniPoruku(indeks: number, izmjena: (p: ChatPoruka) => ChatPoruka): void {

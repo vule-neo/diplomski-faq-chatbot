@@ -135,6 +135,48 @@ def odgovori(pitanje, n_results=10, istorija=None):
     return tekst, chunkovi
 
 
+def odgovori_u_dijelovima(pitanje, n_results=10, istorija=None):
+    """Isto sto i odgovori(), ali vraca tekst u dijelovima kako stize od modela.
+
+    Prvo vrati listu chunkova (da se izvori mogu prikazati odmah), pa zatim dijelove
+    teksta. Time korisnik vidi da odgovor stize umjesto da ceka u prazno.
+    """
+    istorija = istorija or []
+
+    chunkovi = pretrazi(_upit_za_pretragu(pitanje, istorija), n_results=n_results)
+    yield {"vrsta": "izvori", "chunkovi": chunkovi}
+
+    poruke = [{"role": "system", "content": SISTEM_PROMPT}]
+    for ranija in istorija[-6:]:
+        uloga = "user" if ranija["uloga"] == "korisnik" else "assistant"
+        poruke.append({"role": uloga, "content": ranija["tekst"]})
+    poruke.append(
+        {"role": "user", "content": f"Kontekst:\n{izgradi_kontekst(chunkovi)}\n\nPitanje: {pitanje}"}
+    )
+
+    tok = klijent.chat.completions.create(
+        model="openai/gpt-oss-120b",
+        messages=poruke,
+        temperature=0.2,
+        stream=True,
+    )
+
+    nesto_stiglo = False
+    for dio in tok:
+        tekst = dio.choices[0].delta.content
+        if tekst:
+            nesto_stiglo = True
+            yield {"vrsta": "tekst", "tekst": tekst}
+
+    # isti slucaj kao kod obicnog poziva - model zna da vrati prazan sadrzaj
+    if not nesto_stiglo:
+        yield {
+            "vrsta": "tekst",
+            "tekst": "Izvini, nisam uspio da sastavim odgovor na ovo pitanje. "
+                     "Pokušaj da ga postaviš malo drugačije.",
+        }
+
+
 def _pozovi_model(poruke, temperatura):
     odgovor = klijent.chat.completions.create(
         model="openai/gpt-oss-120b",

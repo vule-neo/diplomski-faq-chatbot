@@ -18,6 +18,12 @@ export interface PitanjeZahtev {
   istorija: RanijaPoruka[];
 }
 
+export type StreamDogadjaj =
+  | { vrsta: 'izvori'; izvori: IzvorInfo[] }
+  | { vrsta: 'tekst'; tekst: string }
+  | { vrsta: 'greska'; poruka: string }
+  | { vrsta: 'kraj' };
+
 export interface FeedbackZahtev {
   pitanje: string;
   odgovor: string;

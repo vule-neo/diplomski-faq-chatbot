@@ -2,13 +2,16 @@ import sys
 from contextlib import asynccontextmanager
 from pathlib import Path
 
+import json
+
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from llm.rag import odgovori
+from llm.rag import odgovori, odgovori_u_dijelovima
 from retrieval.pretraga import pretrazi
 from evidencija import zabiljezi_upit, zabiljezi_feedback
 
@@ -87,6 +90,51 @@ def ask(zahtev: PitanjeZahtev):
     )
 
     return OdgovorOdgovor(odgovor=odgovor, izvori=izvori)
+
+
+@app.post("/ask/stream")
+def ask_stream(zahtev: PitanjeZahtev):
+    def dogadjaji():
+        izvori = []
+        djelovi = []
+        try:
+            for stavka in odgovori_u_dijelovima(
+                zahtev.pitanje,
+                istorija=[p.model_dump() for p in zahtev.istorija],
+            ):
+                if stavka["vrsta"] == "izvori":
+                    izvori = [
+                        {
+                            "naslov_dokumenta": c["metadata"]["naslov_dokumenta"],
+                            "sekcija": c["metadata"]["sekcija"],
+                        }
+                        for c in stavka["chunkovi"]
+                    ]
+                    yield _sse({"vrsta": "izvori", "izvori": izvori})
+                else:
+                    djelovi.append(stavka["tekst"])
+                    yield _sse({"vrsta": "tekst", "tekst": stavka["tekst"]})
+        except Exception as e:
+            yield _sse({"vrsta": "greska", "poruka": str(e)})
+            return
+
+        odgovor = "".join(djelovi)
+        zabiljezi_upit(
+            zahtev.pitanje,
+            odgovor,
+            [f"{i['naslov_dokumenta']} / {i['sekcija']}".strip(" /") for i in izvori],
+        )
+        yield _sse({"vrsta": "kraj"})
+
+    return StreamingResponse(
+        dogadjaji(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
+
+
+def _sse(podaci):
+    return f"data: {json.dumps(podaci, ensure_ascii=False)}\n\n"
 
 
 @app.post("/feedback")
