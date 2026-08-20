@@ -99,9 +99,22 @@ def pretrazi(upit, n_results=4):
         ocjene = reranker.predict(
             [(upit, _dokumenti_po_idu[i]) for i in kandidati], batch_size=64
         )
-        poredani = sorted(zip(kandidati, ocjene), key=lambda p: p[1], reverse=True)
-        poredani_idevi = [i for i, _ in poredani[:n_results]]
-        skorovi = {i: float(o) for i, o in poredani}
+        rerank_poredak = [
+            i for i, _ in sorted(zip(kandidati, ocjene), key=lambda p: p[1], reverse=True)
+        ]
+
+        # Reranker je bolji na proznom tekstu, ali losije rangira tabele (kontakti,
+        # spiskovi predmeta) - zna da izbaci tacan dokument koji je brza pretraga
+        # dobro rangirala. Zato se dva poretka spajaju, pa preziv i chunk koji je
+        # jak u samo jednom od njih.
+        spojeni = {}
+        for rang, chunk_id in enumerate(kandidati):
+            spojeni[chunk_id] = spojeni.get(chunk_id, 0) + 1 / (RRF_KONSTANTA + rang + 1)
+        for rang, chunk_id in enumerate(rerank_poredak):
+            spojeni[chunk_id] = spojeni.get(chunk_id, 0) + 1 / (RRF_KONSTANTA + rang + 1)
+
+        poredani_idevi = sorted(spojeni, key=spojeni.get, reverse=True)[:n_results]
+        skorovi = spojeni
     else:
         poredani_idevi = poredani_idevi[:n_results]
 

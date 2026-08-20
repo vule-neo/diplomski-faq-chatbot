@@ -118,10 +118,27 @@ def odgovori(pitanje, n_results=6, istorija=None):
         {"role": "user", "content": f"Kontekst:\n{kontekst}\n\nPitanje: {pitanje}"}
     )
 
+    tekst = _pozovi_model(poruke, temperatura=0.2)
+
+    # Model povremeno sve smjesti u "reasoning" i vrati prazan sadrzaj. Korisniku bi
+    # tada stigao prazan mjehur, sto je gore od bilo kakvog odgovora - pa se pokusa
+    # jos jednom, sa nesto vecom temperaturom da se izbjegne isti ishod.
+    if not (tekst or "").strip():
+        tekst = _pozovi_model(poruke, temperatura=0.5)
+
+    if not (tekst or "").strip():
+        tekst = (
+            "Izvini, nisam uspio da sastavim odgovor na ovo pitanje. "
+            "Pokušaj da ga postaviš malo drugačije."
+        )
+
+    return tekst, chunkovi
+
+
+def _pozovi_model(poruke, temperatura):
     odgovor = klijent.chat.completions.create(
         model="openai/gpt-oss-120b",
         messages=poruke,
-        temperature=0.2,
+        temperature=temperatura,
     )
-
-    return odgovor.choices[0].message.content, chunkovi
+    return odgovor.choices[0].message.content

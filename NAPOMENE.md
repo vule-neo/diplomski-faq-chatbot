@@ -925,6 +925,59 @@ da postoji trag odakle podaci potiču, a da ih pipeline ne obrađuje duplo.
 
 Korpus: 1063 chunka iz 32 dokumenta.
 
+## Nastavnici, kontakti službi i dvije popravke otkrivene pri testiranju
+
+Dodata još dva dokumenta: **spisak nastavnika i saradnika Katedre za RTI** (40 osoba sa
+zvanjem, mejlom i telefonom) i **kontakti službi fakulteta** (dekanat, studentski odsek,
+opšti odsek, računovodstvo, centar za podršku istraživanju).
+
+Spisak nastavnika je izvučen iz PDF-a skriptom — u sirovom tekstu su polja izlomljena
+kroz redove, a naziv katedre se ponavlja za svaku osobu. Parser koristi red sa mejlom
+kao sidro (svaka osoba ima tačno jedan) i od njega rekonstruiše zapis. Telefon se u
+izvornom PDF-u pojavljuje **prije** osobe kojoj pripada, pa je morao biti pomjeren za
+jedno mjesto — provjereno poređenjem sa originalom.
+
+Korpus: 1075 chunkova iz 34 dokumenta.
+
+### Nalaz: reranker lošije rangira tabele nego prozni tekst
+
+Pri testiranju novih dokumenata otkriveno je da na pitanje "Kako da kontaktiram
+računovodstvo?" sistem ne nalazi dokument sa kontaktima. Provjerom je utvrđeno nešto
+neočekivano: **bez rerankera je taj dokument bio na 6. mjestu** (dakle ušao bi u
+kontekst), a **sa rerankerom ispada iz prvih deset**.
+
+Objašnjenje: reranker je treniran na proznim pasusima, a chunk sa kontaktima je
+markdown tabela. Isto važi za novododate dokumente sa predmetima i kalendarom — sve su
+tabele.
+
+Usput je provjereno i da grubo korjenovanje na 5 slova spaja `računovodstvo`,
+`računarski` i `računski` u isti korijen `racun`. Mjereno je da li pomaže dužina 6 ili
+7 — na skupu od 29 test pitanja **hit rate je identičan (97%) za sve tri dužine**, pa
+je izmjena odbačena kao nepotrebna. (Dobar primjer da pretpostavljeni uzrok treba
+izmjeriti prije nego se "popravi".)
+
+*Rješenje:* poredak rerankera se više ne uzima slijepo, nego se **spaja sa poretkom
+brze pretrage** (istim RRF postupkom). Tako preživi chunk koji je jak u bilo kom od dva
+pristupa. Mjereno na 29 pitanja sa poznatim izvorom:
+
+| Pristup | Hit rate |
+|---|---|
+| bez rerankera | 26/29 |
+| **spojeni poredak** | **28/29** |
+
+Uz to, spojeni poredak rješava i konkretne slučajeve (radno vrijeme, školarina, šef
+katedre) koje čisti reranker ili čista brza pretraga pojedinačno promašuju.
+
+### Nalaz: model povremeno vrati prazan odgovor
+
+Na jednom pitanju je sistem vraćao **potpuno prazan odgovor** — korisniku bi stigao
+prazan mjehur, što je gore od "ne znam". Provjerom sirovog odgovora API-ja utvrđeno je
+da `finish_reason` jeste `stop`, ali je `content` prazan, dok je cijelo razmišljanje
+završilo u polju `reasoning`. To je poznato ponašanje modela sa razmišljanjem.
+
+*Rješenje:* ako je sadržaj prazan, poziv se ponavlja jednom sa nešto većom
+temperaturom; ako i tada bude prazan, vraća se jasna poruka umjesto praznine.
+
 ### Poznato ograničenje koje ovim NIJE riješeno
 
 Kratka i uopštena pitanja ("koliko košta školarina") i dalje ne pronalaze konkretan
