@@ -39,7 +39,7 @@ def upozorenje_o_izmjeni(izmjene, naslov_dokumenta, sekcija):
     spisak = ", ".join(sorted(set(dokumenti)))
     return (
         f"[NAPOMENA: ovaj član je kasnije mijenjan dokumentom: {spisak}. "
-        f"Tekst ispod je izvorna verzija — provjeriti izmjene prije nego se navede kao važeći.]"
+        f"Tekst ispod je izvorna verzija, provjeriti izmjene prije nego se navede kao važeći.]"
     )
 
 

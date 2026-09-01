@@ -7,23 +7,23 @@ body {
   height: 100%;
   margin: 0;
   font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-  background: #0b0f17;
-  color: #e6edf3;
+  background: #0d0d0d;
+  color: #ececec;
   -webkit-font-smoothing: antialiased;
 }
 
-/* diskretniji skrol, da ne kvari cist izgled */
 ::-webkit-scrollbar {
-  width: 9px;
+  width: 10px;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #2a3444;
+  background: #2f2f2f;
+  border: 3px solid #0d0d0d;
   border-radius: 999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #3a4759;
+  background: #454545;
 }
 
 ::-webkit-scrollbar-track {

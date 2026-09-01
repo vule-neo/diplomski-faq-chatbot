@@ -1,0 +1,17 @@
+{
+  "files.exclude": {
+    "**/__pycache__": true,
+    "**/.angular": true,
+    "**/node_modules": true,
+    "venv": true,
+    "frontend/dist": true,
+    "data/chroma_db": true,
+    "data/processed": true
+  },
+  "search.exclude": {
+    "venv": true,
+    "**/node_modules": true,
+    "data/chroma_db": true
+  },
+  "files.trimTrailingWhitespace": true
+}

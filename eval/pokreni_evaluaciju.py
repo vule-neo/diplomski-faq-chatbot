@@ -157,7 +157,7 @@ def napisi_markdown(rezultati):
 
     for r in rezultati:
         pogodak = {True: "da", False: "NE", None: "-"}[r["izvor_pogodjen"]]
-        redovi.append(f"## {r['id']} ({r['kategorija']}) — {r['pitanje']}")
+        redovi.append(f"## {r['id']} ({r['kategorija']}): {r['pitanje']}")
         redovi.append("")
         redovi.append(f"- **Očekivano ponašanje:** {r['ocekivano_ponasanje']}")
         if r["napomena"]:

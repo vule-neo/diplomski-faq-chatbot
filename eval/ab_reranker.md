@@ -1,6 +1,6 @@
 # A/B poređenje: pretraga sa rerankerom i bez njega
 
-Mjereno bez poziva LLM-a — provjerava se samo da li je među prvih 10 vraćenih izvora bio dokument za koji je unaprijed određeno da
+Mjereno bez poziva LLM-a, provjerava se samo da li je među prvih 10 vraćenih izvora bio dokument za koji je unaprijed određeno da
 sadrži odgovor. Zbog toga mjerenje ne troši Groq kvotu i ponovljivo je.
 
 Uzorak: **29 pitanja** (od ukupno 37; pitanja van domena nemaju
@@ -21,7 +21,7 @@ Nema.
 
 ## Pitanja koja reranker gubi
 
-Nema — reranker ne kvari nijedno pitanje koje je i prije radilo.
+Nema, reranker ne kvari nijedno pitanje koje je i prije radilo.
 
 ## Po pitanju
 

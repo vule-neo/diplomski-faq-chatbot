@@ -1,62 +1,96 @@
-<div class="pozadina">
-  <span class="mrlja mrlja-1"></span>
-  <span class="mrlja mrlja-2"></span>
-  <span class="mrlja mrlja-3"></span>
-</div>
-
-<div class="app-shell">
-  <header class="header">
-    <div class="header-znak">ETF</div>
-    <div class="header-tekst">
-      <h1>Studentska služba</h1>
-      <p>Pitaj o upisu, ispitima, školarini i pravilnicima</p>
-    </div>
+<div class="app">
+  <header class="vrh">
+    <span class="znak">ETF</span>
+    <span class="naslov">Studentska služba</span>
   </header>
 
-  <main class="chat-area">
-    @if (poruke().length === 0) {
-      <div class="prazno-stanje">
-        <div class="prazno-ikona">💬</div>
-        <h2>Kako mogu da pomognem?</h2>
-        <p>Odgovaram isključivo na osnovu zvaničnih dokumenata fakulteta.</p>
+  <main class="tok">
+    <div class="kolona">
+      @if (poruke().length === 0) {
+        <div class="pocetak">
+          <h1>Kako mogu da pomognem?</h1>
+          <p>Odgovaram samo na osnovu zvaničnih dokumenata fakulteta.</p>
 
-        <div class="predlozi">
-          @for (predlog of predlozi; track predlog) {
-            <button class="predlog" [style.animation-delay]="$index * 70 + 'ms'" (click)="koristiPredlog(predlog)">
-              {{ predlog }}
-            </button>
-          }
+          <div class="predlozi">
+            @for (predlog of predlozi; track predlog) {
+              <button class="predlog" (click)="koristiPredlog(predlog)">{{ predlog }}</button>
+            }
+          </div>
         </div>
-      </div>
-    }
+      }
 
-    @for (poruka of poruke(); track $index) {
-      <div class="poruka" [class.poruka-korisnik]="poruka.tip === 'korisnik'">
-        <div class="mehur">
-          @if (poruka.tip === 'bot') {
-            <div class="mehur-tekst mehur-markdown" [innerHTML]="uHtml(poruka.prikazano ?? poruka.tekst)"></div>
-          } @else {
-            <p class="mehur-tekst">{{ poruka.tekst }}</p>
-          }
+      @for (poruka of poruke(); track $index) {
+        @if (poruka.tip === 'korisnik') {
+          <div class="red red-korisnik">
+            <div class="pitanje-mehur">{{ poruka.tekst }}</div>
+          </div>
+        } @else {
+          <div class="red">
+            <div class="odgovor" [innerHTML]="uHtml(poruka.prikazano ?? poruka.tekst)"></div>
 
-          @if (poruka.tip === 'bot') {
             <div class="alatke">
-              @if (poruka.ocjena) {
-                <span class="alatka alatka-ocijenjeno">
-                  {{ poruka.ocjena === 'koristan' ? '👍 Hvala na oceni' : '👎 Hvala na oceni' }}
-                </span>
-              } @else {
-                <button class="alatka alatka-palac" (click)="ocijeni($index, true)" title="Koristan odgovor">👍</button>
-                <button class="alatka alatka-palac" (click)="ocijeni($index, false)" title="Nekoristan odgovor">👎</button>
-              }
-
               <button class="alatka" (click)="kopirajOdgovor($index)">
-                {{ poruka.kopirano ? '✓ Kopirano' : 'Kopiraj' }}
+                @if (poruka.kopirano) {
+                  <svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>
+                } @else {
+                  <svg viewBox="0 0 24 24">
+                    <rect x="9" y="9" width="12" height="12" rx="2"/>
+                    <path d="M5 15V5a2 2 0 0 1 2-2h8"/>
+                  </svg>
+                }
+                <span class="opis">{{ poruka.kopirano ? 'Kopirano' : 'Kopiraj' }}</span>
+              </button>
+
+              <button
+                class="alatka"
+                [class.alatka-izabrana]="poruka.ocjena === 'koristan'"
+                [disabled]="!!poruka.ocjena"
+                (click)="ocijeni($index, true)"
+              >
+                <svg viewBox="0 0 24 24">
+                  <path d="M7 10v12"/>
+                  <path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z"/>
+                </svg>
+                <span class="opis opis-sa-ikonom">
+                  <svg viewBox="0 0 24 24">
+                    <path d="M7 10v12"/>
+                    <path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z"/>
+                  </svg>
+                  Dobar odgovor
+                </span>
+              </button>
+
+              <button
+                class="alatka"
+                [class.alatka-izabrana]="poruka.ocjena === 'nekoristan'"
+                [disabled]="!!poruka.ocjena"
+                (click)="ocijeni($index, false)"
+              >
+                <svg viewBox="0 0 24 24">
+                  <path d="M17 14V2"/>
+                  <path d="M9 18.12 10 14H4.17a2 2 0 0 1-1.92-2.56l2.33-8A2 2 0 0 1 6.5 2H20a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2.76a2 2 0 0 0-1.79 1.11L12 22a3.13 3.13 0 0 1-3-3.88Z"/>
+                </svg>
+                <span class="opis opis-sa-ikonom">
+                  <svg viewBox="0 0 24 24">
+                    <path d="M17 14V2"/>
+                    <path d="M9 18.12 10 14H4.17a2 2 0 0 1-1.92-2.56l2.33-8A2 2 0 0 1 6.5 2H20a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2.76a2 2 0 0 0-1.79 1.11L12 22a3.13 3.13 0 0 1-3-3.88Z"/>
+                  </svg>
+                  Loš odgovor
+                </span>
               </button>
 
               @if (poruka.izvori && poruka.izvori.length > 0) {
-                <button class="alatka" (click)="prebaciIzvore($index)">
-                  {{ poruka.izvoriOtvoreni ? 'Sakrij izvore' : 'Izvori (' + poruka.izvori.length + ')' }}
+                <button
+                  class="alatka"
+                  [class.alatka-izabrana]="poruka.izvoriOtvoreni"
+                  (click)="prebaciIzvore($index)"
+                >
+                  <svg viewBox="0 0 24 24">
+                    <path d="M12 7v14"/>
+                    <path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/>
+                  </svg>
+                  <span class="broj-izvora">{{ poruka.izvori.length }}</span>
+                  <span class="opis">{{ poruka.izvoriOtvoreni ? 'Sakrij izvore' : 'Izvori' }}</span>
                 </button>
               }
             </div>
@@ -64,48 +98,52 @@
             @if (poruka.izvoriOtvoreni && poruka.izvori) {
               <div class="izvori">
                 @for (izvor of poruka.izvori; track $index) {
-                  <span class="izvor-oznaka" [style.animation-delay]="$index * 45 + 'ms'">
+                  <span class="izvor">
                     {{ izvor.naslov_dokumenta }}{{ izvor.sekcija ? ' · ' + izvor.sekcija : '' }}
                   </span>
                 }
               </div>
             }
-          }
-        </div>
-      </div>
-    }
+          </div>
+        }
+      }
 
-    @if (ucitavanje()) {
-      <div class="poruka">
-        <div class="mehur mehur-ucitavanje">
-          <span class="tacka"></span><span class="tacka"></span><span class="tacka"></span>
+      @if (ucitavanje()) {
+        <div class="red">
+          <div class="kuca"></div>
         </div>
-      </div>
-    }
+      }
 
-    @if (greska()) {
-      <div class="greska-traka">⚠ {{ greska() }}</div>
-    }
+      @if (greska()) {
+        <div class="red">
+          <div class="greska">{{ greska() }}</div>
+        </div>
+      }
+    </div>
   </main>
 
-  <footer class="unos-traka">
-    <textarea
-      class="unos-polje"
-      placeholder="Postavi pitanje..."
-      rows="2"
-      [ngModel]="pitanje()"
-      (ngModelChange)="pitanje.set($event)"
-      (keydown)="naTipku($event)"
-      (input)="prilagodiVisinu($event)"
-      [disabled]="ucitavanje()"
-    ></textarea>
-    <button
-      class="dugme-posalji"
-      (click)="posaljiPitanje()"
-      [disabled]="ucitavanje() || !pitanje().trim()"
-      title="Pošalji (Enter)"
-    >
-      <span class="strelica">↑</span>
-    </button>
+  <footer class="dno">
+    <div class="kolona">
+      <div class="unos">
+        <textarea
+          class="polje"
+          placeholder="Postavi pitanje"
+          rows="1"
+          [ngModel]="pitanje()"
+          (ngModelChange)="pitanje.set($event)"
+          (keydown)="naTipku($event)"
+          (input)="prilagodiVisinu($event)"
+          [disabled]="ucitavanje()"
+        ></textarea>
+        <button
+          class="posalji"
+          (click)="posaljiPitanje()"
+          [disabled]="ucitavanje() || !pitanje().trim()"
+        >
+          <svg viewBox="0 0 24 24"><path d="M12 19V5"/><path d="m5 12 7-7 7 7"/></svg>
+        </button>
+      </div>
+      <p class="sitno">Provjeri važne podatke u studentskoj službi.</p>
+    </div>
   </footer>
 </div>

@@ -37,5 +37,5 @@ Promašeni izvor: A1
 
 ## Netačni odgovori
 
-- **A11** — LAZNO ODBIJANJE. Rekao da ne zna, a podatak postoji: 'Radno vreme saltera je od 11-13h' (Pitanja i odgovori Q&A). Greska pretrage, ne generisanja.
-- **D2** — LAZNO ODBIJANJE. Podatak POSTOJI: Pravilnik o disciplinskoj odgovornosti, Clan 9 (koriscenje nedozvoljenih sredstava na ispitu = teza povreda) i Clan 10 (mjere: zabrana polaganja ispita, privremeno udaljavanje, iskljucenje sa studija). Retrieval je dovukao pravi dokument ali pogresne clanove (18, 20, 35 - procedura umjesto prekrsaja i mjera).
+- **A11**: LAZNO ODBIJANJE. Rekao da ne zna, a podatak postoji: 'Radno vreme saltera je od 11-13h' (Pitanja i odgovori Q&A). Greska pretrage, ne generisanja.
+- **D2**: LAZNO ODBIJANJE. Podatak POSTOJI: Pravilnik o disciplinskoj odgovornosti, Clan 9 (koriscenje nedozvoljenih sredstava na ispitu = teza povreda) i Clan 10 (mjere: zabrana polaganja ispita, privremeno udaljavanje, iskljucenje sa studija). Retrieval je dovukao pravi dokument ali pogresne clanove (18, 20, 35 - procedura umjesto prekrsaja i mjera).

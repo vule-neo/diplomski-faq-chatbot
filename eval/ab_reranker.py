@@ -62,7 +62,7 @@ def main():
     redovi = [
         "# A/B poređenje: pretraga sa rerankerom i bez njega",
         "",
-        "Mjereno bez poziva LLM-a — provjerava se samo da li je među prvih "
+        "Mjereno bez poziva LLM-a, provjerava se samo da li je među prvih "
         f"{BROJ_IZVORA} vraćenih izvora bio dokument za koji je unaprijed određeno da",
         "sadrži odgovor. Zbog toga mjerenje ne troši Groq kvotu i ponovljivo je.",
         "",
@@ -83,16 +83,16 @@ def main():
     redovi += ["## Pitanja koja reranker dobija", ""]
     if dobijeno:
         for p in dobijeno:
-            redovi.append(f"- **{p['id']}** ({p['kategorija']}) — {p['pitanje']}")
+            redovi.append(f"- **{p['id']}** ({p['kategorija']}): {p['pitanje']}")
     else:
         redovi.append("Nema.")
 
     redovi += ["", "## Pitanja koja reranker gubi", ""]
     if izgubljeno:
         for p in izgubljeno:
-            redovi.append(f"- **{p['id']}** ({p['kategorija']}) — {p['pitanje']}")
+            redovi.append(f"- **{p['id']}** ({p['kategorija']}): {p['pitanje']}")
     else:
-        redovi.append("Nema — reranker ne kvari nijedno pitanje koje je i prije radilo.")
+        redovi.append("Nema, reranker ne kvari nijedno pitanje koje je i prije radilo.")
 
     redovi += ["", "## Po pitanju", "", "| ID | Kategorija | Bez | Sa | |", "|---|---|:-:|:-:|---|"]
     for p in pitanja:

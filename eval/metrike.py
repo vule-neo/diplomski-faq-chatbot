@@ -138,7 +138,7 @@ def main():
 
     if lazna_odbijanja:
         for ident, napomena in lazna_odbijanja:
-            redovi.append(f"- **{ident}** — {napomena}")
+            redovi.append(f"- **{ident}**: {napomena}")
     else:
         redovi.append("Nema netačnih odgovora.")
 
