@@ -4,11 +4,7 @@ import json
 from obradi_dokumente import PROCESSED_DIR
 
 MAX_CHUNK_KARAKTERA = 1200
-PREKLAPANJE_KARAKTERA = 250  # susjedni chunkovi dijele kraj prethodnog, da nabrajanje
-                              # presjeceno na granici ne ostane "polovicno" (npr. lista
-                              # modula koja stane poslije prve stavke - LLM tada dopuni
-                              # ostatak iz svog znanja umjesto iz dokumenta)
-
+PREKLAPANJE_KARAKTERA = 250
 NASLOV_H1_REGEX = re.compile(r'(?m)^# .+\n+')
 NASLOV_SEKCIJE_REGEX = re.compile(r'(?m)^## (.+)$')
 BROJ_CLANA_REGEX = re.compile(r'(\d+)')
@@ -23,8 +19,6 @@ def ucitaj_izmjene():
 
 
 def upozorenje_o_izmjeni(izmjene, naslov_dokumenta, sekcija):
-    # ako je clan kasnije mijenjan, to mora da stoji uz sam tekst - inace model
-    # nema nacin da sazna da odredba koju cita vise ne vazi u tom obliku
     if not sekcija or naslov_dokumenta not in izmjene:
         return None
 
@@ -73,10 +67,9 @@ def podijeli_tekst_do_granice(sadrzaj, max_karaktera, razdvajac='\n\n'):
                 trenutna = []
                 trenutna_duzina = 0
             if razdvajac == '\n\n':
-                # ovaj "pasus" nema praznih redova unutar sebe, probaj po pojedinacnim redovima
                 grupe.extend(podijeli_tekst_do_granice(dio, max_karaktera, razdvajac='\n'))
             else:
-                # ni pojedinacan red se ne moze dalje bezbjedno usitniti, ostavi ga kako jeste
+                # ni pojedinacan red se ne moze dalje usitniti, ostavi ga kako jeste
                 grupe.append(dio)
             continue
 
@@ -101,7 +94,6 @@ def dodaj_preklapanje(grupe, preklapanje=PREKLAPANJE_KARAKTERA):
     sa_preklapanjem = [grupe[0]]
     for i in range(1, len(grupe)):
         rep = grupe[i - 1][-preklapanje:]
-        # ne sijeci rijec na pola - kreni od prvog prelomna reda u repu
         prelom = rep.find('\n')
         if prelom != -1:
             rep = rep[prelom + 1:]

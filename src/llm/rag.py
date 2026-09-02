@@ -90,8 +90,6 @@ def izgradi_kontekst(chunkovi):
 
 
 def _upit_za_pretragu(pitanje, istorija):
-    # kratka dopunska pitanja ("a za master?") sama po sebi nemaju dovoljno sadrzaja
-    # da se nesto nadje - zato im se pridruzi prethodno pitanje studenta
     if not istorija or len(pitanje.split()) > 5:
         return pitanje
 
@@ -120,9 +118,6 @@ def odgovori(pitanje, n_results=10, istorija=None):
 
     tekst = _pozovi_model(poruke, temperatura=0.2)
 
-    # Model povremeno sve smjesti u "reasoning" i vrati prazan sadrzaj. Korisniku bi
-    # tada stigao prazan mjehur, sto je gore od bilo kakvog odgovora - pa se pokusa
-    # jos jednom, sa nesto vecom temperaturom da se izbjegne isti ishod.
     if not (tekst or "").strip():
         tekst = _pozovi_model(poruke, temperatura=0.5)
 
@@ -168,7 +163,6 @@ def odgovori_u_dijelovima(pitanje, n_results=10, istorija=None):
             nesto_stiglo = True
             yield {"vrsta": "tekst", "tekst": tekst}
 
-    # isti slucaj kao kod obicnog poziva - model zna da vrati prazan sadrzaj
     if not nesto_stiglo:
         yield {
             "vrsta": "tekst",
