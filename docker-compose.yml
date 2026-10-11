@@ -1,0 +1,24 @@
+services:
+  backend:
+    build: .
+    env_file: .env
+    volumes:
+      - upiti_data:/app/data
+    healthcheck:
+      # backend image je python-slim (nema curl), pa provjeravamo pythonom
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3)"]
+      interval: 10s        # provjeravaj svakih 10s
+      timeout: 5s          # jedna provjera sme trajati najvise 5s
+      retries: 5           # posle 5 neuspjeha -> "unhealthy"
+      start_period: 180s   # cold start (ucitavanje modela) ume da traje dugo na opterecenoj masini
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "4200:80"
+    depends_on:
+      backend:
+        condition: service_healthy    # cekaj da backend bude ZDRAV, ne samo pokrenut
+
+volumes:
+  upiti_data:

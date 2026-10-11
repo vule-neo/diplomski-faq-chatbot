@@ -10,7 +10,9 @@ import {
   StreamDogadjaj,
 } from '../models/chat.model';
 
-const API_URL = 'http://localhost:8000';
+// Relativna putanja: nginx proksira /api na backend (vidi frontend/nginx.conf).
+// U dev-u (ng serve) treba proxy, vidi frontend/proxy.conf.json.
+const API_URL = '/api';
 
 @Injectable({
   providedIn: 'root',

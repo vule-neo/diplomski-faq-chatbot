@@ -1,0 +1,11 @@
+venv/
+.env
+__pycache__/
+*.pyc
+.git/
+frontend/
+eval/
+data/raw/
+data/processed/
+data/upiti.jsonl
+data/feedback.jsonl
