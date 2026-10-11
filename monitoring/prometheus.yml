@@ -1,0 +1,12 @@
+# Globalna podesavanja
+global:
+  scrape_interval: 5s        # koliko cesto Prometheus kupi metrike
+
+# Koga skupljati ("job" = jedna grupa meta koje se skupljaju)
+scrape_configs:
+  - job_name: backend
+    metrics_path: /metrics
+    static_configs:
+      # "backend:8000" = ime servisa iz docker-compose + port.
+      # Prometheus do backenda stize preko iste interne Docker mreze (kao nginx).
+      - targets: ["backend:8000"]

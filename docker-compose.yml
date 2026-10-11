@@ -2,6 +2,11 @@ services:
   backend:
     build: .
     env_file: .env
+    environment:
+      # prosljedjujemo sa hosta ako su postavljene; podrazumijevano ugaseno.
+      # pokretanje load testa: MOCK_LLM=1 docker compose up -d backend
+      - MOCK_LLM=${MOCK_LLM:-0}
+      - MOCK_LLM_DELAY=${MOCK_LLM_DELAY:-0.3}
     volumes:
       - upiti_data:/app/data
     healthcheck:
@@ -20,5 +25,31 @@ services:
       backend:
         condition: service_healthy    # cekaj da backend bude ZDRAV, ne samo pokrenut
 
+  prometheus:
+    image: prom/prometheus:v3.1.0
+    volumes:
+      # bind mount configa (read-only), pa imenovani volume za podatke
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    ports:
+      - "9090:9090"          # Prometheus UI, otvaras u browseru na 9090
+    depends_on:
+      - backend            # koga skuplja? (bez njega nema sta da kupi)
+
+  grafana:
+    image: grafana/grafana:11.4.0
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin    # login: admin / admin
+    volumes:
+      - grafana_data:/var/lib/grafana       # da dashboardi prezive restart
+    ports:
+      - "3000:3000"         # Grafana UI
+    depends_on:
+      - prometheus                # iz cega crta? (datasource)
+
+
 volumes:
   upiti_data:
+  prometheus_data:
+  grafana_data:
+

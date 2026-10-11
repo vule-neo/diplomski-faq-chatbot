@@ -4,6 +4,7 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 from groq import Groq
+import time
 
 from prometheus_client import Histogram, Counter
 
@@ -23,6 +24,14 @@ from retrieval.pretraga import pretrazi
 from api.evidencija import je_odbijanje
 
 load_dotenv()
+# Lazni LLM za load test: kad je MOCK_LLM=1, ne zovemo Groq nego vracamo
+# izmisljen odgovor posle podesivog kasnjenja. Tako testiramo svoju infrastrukturu
+# bez trosenja Groq kvote. MOCK_LLM_DELAY simulira koliko LLM "misli".
+MOCK_LLM = os.getenv("MOCK_LLM") == "1"
+MOCK_LLM_DELAY = float(os.getenv("MOCK_LLM_DELAY", "0.3"))
+MOCK_ODGOVOR = "Testni odgovor za load test. Podaci se nalaze u kontekstu."
+
+
 
 klijent = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
@@ -177,6 +186,13 @@ def odgovori_u_dijelovima(pitanje, n_results=10, istorija=None):
         {"role": "user", "content": f"Kontekst:\n{izgradi_kontekst(chunkovi)}\n\nPitanje: {pitanje}"}
     )
 
+    if MOCK_LLM:
+        # lazni streaming: vracamo odgovor rijec po rijec, da i /ask/stream radi u testu
+        for rijec in MOCK_ODGOVOR.split():
+            time.sleep(MOCK_LLM_DELAY / 10)
+            yield {"vrsta": "tekst", "tekst": rijec + " "}
+        return
+
     tok = klijent.chat.completions.create(
         model="openai/gpt-oss-120b",
         messages=poruke,
@@ -200,6 +216,9 @@ def odgovori_u_dijelovima(pitanje, n_results=10, istorija=None):
 
 
 def _pozovi_model(poruke, temperatura):
+    if MOCK_LLM:
+        time.sleep(MOCK_LLM_DELAY)
+        return MOCK_ODGOVOR
     odgovor = klijent.chat.completions.create(
         model="openai/gpt-oss-120b",
         messages=poruke,
