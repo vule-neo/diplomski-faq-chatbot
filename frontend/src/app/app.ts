@@ -62,9 +62,10 @@ export class App {
       return;
     }
 
-    // istorija se uzima prije nego se novo pitanje doda u listu
+    // istorija se uzima prije nego se novo pitanje doda u listu.
+    // 20 poruka = ~10 razmjena; backend svejedno ponovo sijece na MAX_ISTORIJA.
     const istorija: RanijaPoruka[] = this.poruke()
-      .slice(-6)
+      .slice(-20)
       .map((p) => ({ uloga: p.tip, tekst: p.tekst }));
 
     this.poruke.update((trenutne) => [...trenutne, { tip: 'korisnik', tekst: tekstPitanja }]);

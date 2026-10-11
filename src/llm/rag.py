@@ -5,8 +5,22 @@ from pathlib import Path
 from dotenv import load_dotenv
 from groq import Groq
 
+from prometheus_client import Histogram, Counter
+
+
+PRETRAGA_SEKUNDE = Histogram("rag_pretraga_sekunde", "Vrijeme pretrage dokumenata")
+LLM_SEKUNDE = Histogram("rag_llm_sekunde", "Vrijeme LLM poziva")
+ODBIJANJA = Counter("rag_odbijanja_ukupno", "Broj odbijenih odgovora")
+PITANJA = Counter("rag_pitanja_ukupno", "Ukupan broj pitanja")
+
+# koliko prethodnih poruka saljemo modelu (da pamti razgovor, kao u obicnom chatu).
+# 20 poruka = ~10 razmjena; dovoljno za tipican razgovor, a ogranicava rast tokena.
+MAX_ISTORIJA = 20
+
+
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from retrieval.pretraga import pretrazi
+from api.evidencija import je_odbijanje
 
 load_dotenv()
 
@@ -60,6 +74,12 @@ Vodi računa o prethodnim porukama u razgovoru. Ako student postavi kratko dopun
 pitanje ("a za master?", "a ako ne položim?"), razumij ga u kontekstu onoga o čemu ste
 već pričali.
 
+Ako student pita o samom razgovoru (na primjer "o čemu smo pričali", "šta sam te do
+sada pitao", "ponovi prethodni odgovor"), odgovori na osnovu prethodnih poruka u ovom
+razgovoru, a ne na osnovu priloženih dokumenata. To je jedini slučaj kada izvor odgovora
+nisu dokumenti nego sam razgovor; pravilo "odgovaraj samo iz konteksta" i dalje važi za
+sva činjenična pitanja o fakultetu.
+
 Kad ne znaš odgovor, nemoj samo odbiti. Reci šta jeste našao ako je iole povezano,
 i predloži kako student može doći do informacije. Uputstvo da se obrati studentskoj
 službi navedi samo kada zaista nemaš ništa korisno, a ne kao automatski dodatak na
@@ -102,13 +122,14 @@ def _upit_za_pretragu(pitanje, istorija):
 
 def odgovori(pitanje, n_results=10, istorija=None):
     istorija = istorija or []
+    with PRETRAGA_SEKUNDE.time():
+        chunkovi = pretrazi(_upit_za_pretragu(pitanje, istorija), n_results=n_results)
 
-    chunkovi = pretrazi(_upit_za_pretragu(pitanje, istorija), n_results=n_results)
     kontekst = izgradi_kontekst(chunkovi)
 
     poruke = [{"role": "system", "content": SISTEM_PROMPT}]
 
-    for ranija in istorija[-6:]:
+    for ranija in istorija[-MAX_ISTORIJA:]:
         uloga = "user" if ranija["uloga"] == "korisnik" else "assistant"
         poruke.append({"role": uloga, "content": ranija["tekst"]})
 
@@ -116,7 +137,9 @@ def odgovori(pitanje, n_results=10, istorija=None):
         {"role": "user", "content": f"Kontekst:\n{kontekst}\n\nPitanje: {pitanje}"}
     )
 
-    tekst = _pozovi_model(poruke, temperatura=0.2)
+    with LLM_SEKUNDE.time():
+        tekst = _pozovi_model(poruke, temperatura=0.2)
+
 
     if not (tekst or "").strip():
         tekst = _pozovi_model(poruke, temperatura=0.5)
@@ -126,6 +149,11 @@ def odgovori(pitanje, n_results=10, istorija=None):
             "Izvini, nisam uspio da sastavim odgovor na ovo pitanje. "
             "Pokušaj da ga postaviš malo drugačije."
         )
+
+    PITANJA.inc()
+    if je_odbijanje(tekst):
+        ODBIJANJA.inc()
+
 
     return tekst, chunkovi
 
@@ -142,7 +170,7 @@ def odgovori_u_dijelovima(pitanje, n_results=10, istorija=None):
     yield {"vrsta": "izvori", "chunkovi": chunkovi}
 
     poruke = [{"role": "system", "content": SISTEM_PROMPT}]
-    for ranija in istorija[-6:]:
+    for ranija in istorija[-MAX_ISTORIJA:]:
         uloga = "user" if ranija["uloga"] == "korisnik" else "assistant"
         poruke.append({"role": uloga, "content": ranija["tekst"]})
     poruke.append(

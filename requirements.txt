@@ -8,3 +8,4 @@ pytesseract
 rank_bm25
 fastapi
 uvicorn
+prometheus-fastapi-instrumentator

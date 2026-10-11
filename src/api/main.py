@@ -14,6 +14,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from llm.rag import odgovori, odgovori_u_dijelovima
 from retrieval.pretraga import pretrazi
 from evidencija import zabiljezi_upit, zabiljezi_feedback
+from prometheus_fastapi_instrumentator import Instrumentator
+
 
 
 @asynccontextmanager
@@ -30,6 +32,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+Instrumentator().instrument(app).expose(app)
 
 
 class RanijaPoruka(BaseModel):
