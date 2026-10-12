@@ -7,6 +7,7 @@ services:
       # pokretanje load testa: MOCK_LLM=1 docker compose up -d backend
       - MOCK_LLM=${MOCK_LLM:-0}
       - MOCK_LLM_DELAY=${MOCK_LLM_DELAY:-0.3}
+      - KORISTI_RERANKER=${KORISTI_RERANKER:-1}
     volumes:
       - upiti_data:/app/data
     healthcheck:
@@ -43,7 +44,7 @@ services:
     volumes:
       - grafana_data:/var/lib/grafana       # da dashboardi prezive restart
     ports:
-      - "3000:3000"         # Grafana UI
+      - "3001:3000"         # Grafana UI (3000 na hostu zauzet, koristimo 3001)
     depends_on:
       - prometheus                # iz cega crta? (datasource)
 

@@ -1,3 +1,4 @@
+import os
 import sys
 from pathlib import Path
 
@@ -27,7 +28,9 @@ BROJ_ZA_RERANK = 40
 RERANKER_MAX_TOKENA = 192
 # koliko najboljih iz brze pretrage reranker ne smije da izbaci
 GARANTOVANO_IZ_BRZE_PRETRAGE = 3
-KORISTI_RERANKER = True
+# Default ukljucen (produkcijsko ponasanje); iskljuci sa KORISTI_RERANKER=0 za test.
+# A/B (eval/ab_reranker.md): reranker dodaje ~3.5s a ne mijenja tacnost.
+KORISTI_RERANKER = os.getenv("KORISTI_RERANKER", "1") == "1"
 
 _model = None
 _reranker = None
