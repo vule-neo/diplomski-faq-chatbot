@@ -1,0 +1,22 @@
+name: Deploy                 # ime, vidis ga u GitHub "Actions" tabu
+
+on:                          # KADA da se pokrene
+  push:
+    branches: [ master ]     # samo na push na master
+
+jobs:                        # sta da radi (moze vise poslova)
+  deploy:                    # ime posla (biramo ga mi)
+    runs-on: ubuntu-latest   # koji runner (GitHub ti da Ubuntu masinu)
+    steps:                   # koraci po redu (kao faze kompajlera)
+      - uses: actions/checkout@v4      # korak 1: povuci kod (gotov "alat")
+
+      - name: Deploy on EC2            # korak 2: nas SSH deploy
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd ~/diplomski-faq-chatbot
+            git pull
+            KORISTI_RERANKER=0 docker compose up -d --build backend frontend
