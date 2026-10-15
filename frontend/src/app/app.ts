@@ -9,7 +9,6 @@ const PREDLOZENA_PITANJA = [
   'Koji su rokovi za prijavu ispita?',
   'Koliko ESPB treba za upis naredne godine?',
   'Koliko bodova je potrebno za budžet?',
-  'Koliko traje stručna praksa?',
 ];
 
 @Component({
